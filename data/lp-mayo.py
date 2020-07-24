@@ -16,7 +16,6 @@ class LPMAYO(PatchData):
             args, name=name, mode=mode, benchmark=benchmark
         )
         # LPMAYO specific
-        self.body_part = args.body_part
         
 
     def _scan(self):

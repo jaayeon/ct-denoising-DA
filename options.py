@@ -82,6 +82,8 @@ parser.add_argument('--body_part', type=str, nargs='+', choices=['C', 'L', 'N'],
 #edsr
 parser.add_argument('--res_scale', type=float, default=1,
                     help='residual scaling')
+parser.add_argument('--n_resblocks', type=int, default=16, 
+                    help='# resblocks for edsr')
 
 parser.add_argument('--test_every', type=int, default=1000,
                     help='do test per every N batches')

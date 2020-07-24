@@ -12,7 +12,7 @@ class EDSR(nn.Module):
         super(EDSR, self).__init__()
 
         # n_resblocks = opt.n_resblocks
-        n_resblocks = 32
+        n_resblocks = 16
         # n_feats = opt.n_feats
         n_feats = 96
         kernel_size = 3 

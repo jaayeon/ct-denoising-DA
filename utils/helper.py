@@ -50,4 +50,11 @@ def set_test_dir(opt):
     if opt.ensemble:
         test_dir_opt = test_dir_opt + "-ensemble"
 
+    #for linux server
+    if os.name == 'posix': #linux
+        test_result_dir = opt.test_result_dir.split('\\')
+        '/'.join(test_result_dir)
+    elif os.name == 'nt': #window
+        pass
+
     opt.test_result_dir = os.path.join(opt.test_result_dir , test_dir_opt)
