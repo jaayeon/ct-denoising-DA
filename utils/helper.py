@@ -30,12 +30,12 @@ def set_gpu(opt):
 
 def set_checkpoint_dir(opt):
     dt = datetime.datetime.now()
-    date = dt.strftime("%Y%m%d")
+    date = dt.strftime("%Y%m%d-%H%M")
 
     dataset_name = ''
     for d in opt.train_datasets:
         dataset_name = dataset_name + d
-    model_opt = dataset_name  + "-" + date + "-" + opt.model + '-patch' + str(opt.patch_size)
+    model_opt = dataset_name  + "-" + date + "-" + opt.model
     if opt.dataset == 'lp-mayo':
         model_opt = model_opt + '-'
         for bp in opt.body_part:
