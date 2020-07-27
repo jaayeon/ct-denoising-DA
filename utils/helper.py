@@ -36,6 +36,10 @@ def set_checkpoint_dir(opt):
     for d in opt.train_datasets:
         dataset_name = dataset_name + d
     model_opt = dataset_name  + "-" + date + "-" + opt.model + '-patch' + str(opt.patch_size)
+    if opt.dataset == 'lp-mayo':
+        model_opt = model_opt + '-'
+        for bp in opt.body_part:
+            model_opt = model_opt + bp
     
     opt.checkpoint_dir = os.path.join(opt.checkpoint_dir, model_opt)
 

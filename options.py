@@ -12,12 +12,15 @@ test_result_dir = os.path.join(data_dir, 'test_result_ad')
 parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'result'])
-parser.add_argument('--model', type=str, default='dncnn', choices=['dncnn', 'unet', 'edsr'])
+parser.add_argument('--model', type=str, default='edsr', choices=['dncnn', 'unet', 'edsr'])
 
 parser.add_argument('--multi_gpu', default=False, action='store_true',
                     help='Use multiple GPUs')
 parser.add_argument('--use_cuda', dest='use_cuda', action='store_true',
                     help='Use cuda')
+parser.add_argument('--use_cpu', dest='use_cuda', action='store_true',
+                    help='Use cpu, do not use cuda')
+parser.set_defaults(use_cuda=True)
 parser.add_argument('--device', type=str, default='cpu',
                     help='CPU or GPU')
 parser.add_argument("--n_threads", type=int, default=6,
