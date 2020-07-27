@@ -132,8 +132,12 @@ def run_test(opt, img_list, gt_img_list):
         #only for gray scale img
         if opt.use_cuda:
             out_img = out_img_tensor[0,0,:,:].to('cpu').detach().numpy()
+            input_img = input_img.to('cpu').detach().numpy()
+            gt_img = gt_img.to('cpu').detach().numpy()
         else : 
             out_img = out_img_tensor[0,0,:,:].detach().numpy()
+
+        concat_img = np.concatenate((input_img, out_img, gt_img), axis=1)
 
         if 'C' in img_path:
             C_num += 1
@@ -163,7 +167,7 @@ def run_test(opt, img_list, gt_img_list):
 
         # print("out_img.shape:", out_img.shape)
         # print(os.path.abspath(dst_img_path))
-        imsave(dst_img_path, out_img)
+        imsave(dst_img_path, concat_img)
 
     print("[CHEST] #{:d} Test Average Noise Loss: {:.8f}, Average Noise PSNR: {:.8f}, Average Loss: {:.8f}, Average PSNR: {:.8f}".format(
         C_num, C_noise_avg_loss / C_num, C_noise_avg_psnr / C_num, C_avg_loss / C_num, C_avg_psnr / C_num
