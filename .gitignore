@@ -4,3 +4,4 @@
 /*.model
 /**/*.pyc
 /*.pyc
+__pycache__/*
