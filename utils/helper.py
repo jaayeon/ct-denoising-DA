@@ -46,19 +46,27 @@ def set_checkpoint_dir(opt):
 def set_test_dir(opt):
     model_opt = os.path.basename(opt.checkpoint_dir)
 
-    if opt.test_patches:
-        test_dir_opt = model_opt + '-patch_offset' + str(opt.patch_offset)
-    else:
-        test_dir_opt = model_opt + "-image"
+    # if opt.test_patches:
+    #     test_dir_opt = model_opt + '-patch_offset' + str(opt.patch_offset)
+    # else:
+    #     test_dir_opt = model_opt + "-image"
 
     if opt.ensemble:
         test_dir_opt = test_dir_opt + "-ensemble"
 
+    test_dir_opt += '-testset-{}'.format(opt.dataset)
+
     #for linux server
-    if os.name == 'posix': #linux
-        test_result_dir = opt.test_result_dir.split('\\')
-        '/'.join(test_result_dir)
-    elif os.name == 'nt': #window
-        pass
+    opt.test_result_dir = change_os_slash(opt.test_result_dir)
 
     opt.test_result_dir = os.path.join(opt.test_result_dir , test_dir_opt)
+
+
+def change_os_slash(dir_name):
+    if os.name == 'posix':  #linux
+        dir_name = dir_name.split('\\')
+        out_dir_name = '/'.join(dir_name)
+    elif os.name == 'nt':  #window
+        out_dir_name = dir_name
+
+    return out_dir_name

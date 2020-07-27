@@ -6,8 +6,8 @@ data_dir = r'../../data/denoising'
 
 train_dir = os.path.join(data_dir, 'train')
 test_dir = os.path.join(data_dir, 'test')
-checkpoint_dir= os.path.join(data_dir, 'checkpoint_ad')
-test_result_dir = os.path.join(data_dir, 'test_result_ad')
+checkpoint_dir= os.path.join(data_dir, 'checkpoint_DA')
+test_result_dir = os.path.join(data_dir, 'test_result_DA')
 
 parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
@@ -126,8 +126,8 @@ if args.dataset == 'lp-mayo':
     args.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
     args.img_dir = r'../../data/denoising/test/lp-mayo/low'
 elif args.dataset == 'mayo':
-    args.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm/L506'.format(args.thickness)
-    args.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm/L506'.format(args.thickness)
+    args.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm'.format(args.thickness)
+    args.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm'.format(args.thickness)
 elif args.dataset == 'piglet':
     args.gt_img_dir = r'../../data/denoising/test/piglet/full'
     args.img_dir = r'../../data/denoising/test/piglet/quarter'

@@ -104,6 +104,7 @@ def get_test_img_list(opt):
     print(opt.gt_img_dir)
     gt_img_list = glob.glob(os.path.join(opt.gt_img_dir, '*', '*'))
     # print(gt_img_list)
+    print('test img low path : {}\n test img high path : {}'.format(opt.img_dir, opt.gt_img_dir))
     return img_list, gt_img_list
 
 

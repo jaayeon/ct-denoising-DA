@@ -121,8 +121,6 @@ def run_test(opt, img_list, gt_img_list):
         #only for gray scale img
         if opt.use_cuda:
             out_img = out_img_tensor[0,0,:,:].to('cpu').detach().numpy()
-            input_img = input_img.to('cpu').detach().numpy()
-            gt_img = gt_img.to('cpu').detach().numpy()
         else : 
             out_img = out_img_tensor[0,0,:,:].detach().numpy()
 

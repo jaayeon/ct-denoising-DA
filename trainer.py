@@ -19,7 +19,7 @@ def run_train(opt, training_dataloader, valid_dataloader):
 
     # check gpu setting with opt arguments
     opt = set_gpu(opt)
-
+    
     print('Initialize networks for training')
     net = set_model(opt)
     print(net)
