@@ -5,117 +5,119 @@ import torch.nn.functional as F
 from models.convs import common
 from models.convs import attention
 
-from utils.wavelet import normalize_coeffs, unnormalize_coeffs, standarize_coeffs, unstandarize_coeffs
-
 def make_model(opt):
-    return UNet(opt)
+    return Unet(opt)
 
+class Unet(nn.Module):
+    
+    def __init__(self):
+        super(Unet, self).__init__()
 
-class UNet(nn.Module):
-    def __init__(self, opt):
-        super(UNet, self).__init__()
-        c = opt.swt_num_channels
+        def CBR2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=True):
+            layers = []
+            layers += [nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
+                                 kernel_size=kernel_size, stride=stride, padding=padding,
+                                 bias=bias)]
+            layers += [nn.BatchNorm2d(num_features=out_channels)]
+            layers += [nn.ReLU()]
 
-        self.ch_mean = opt.ch_mean
-        self.ch_std = opt.ch_std
-        
-        self.inc = nn.Sequential(
-            single_conv(c, 64),
-            single_conv(64, 64)
-        )
+            cbr = nn.Sequential(*layers)
 
-        self.down1 = nn.AvgPool2d(2)
-        self.conv1 = nn.Sequential(
-            single_conv(64, 128),
-            single_conv(128, 128),
-            single_conv(128, 128)
-        )
+            return cbr
 
-        self.down2 = nn.AvgPool2d(2)
-        self.conv2 = nn.Sequential(
-            single_conv(128, 256),
-            single_conv(256, 256),
-            single_conv(256, 256),
-            single_conv(256, 256),
-            single_conv(256, 256),
-            single_conv(256, 256)
-        )
+        # Contracting path
+        self.enc1_1 = CBR2d(in_channels=1, out_channels=64)
+        self.enc1_2 = CBR2d(in_channels=64, out_channels=64)
 
-        self.up1 = up(256)
-        self.conv3 = nn.Sequential(
-            single_conv(128, 128),
-            single_conv(128, 128),
-            single_conv(128, 128)
-        )
+        self.pool1 = nn.MaxPool2d(kernel_size=2)
 
-        self.up2 = up(128)
-        self.conv4 = nn.Sequential(
-            single_conv(64, 64),
-            single_conv(64, 64)
-        )
+        self.enc2_1 = CBR2d(in_channels=64, out_channels=128)
+        self.enc2_2 = CBR2d(in_channels=128, out_channels=128)
 
-        self.outc = outconv(64, c)
+        self.pool2 = nn.MaxPool2d(kernel_size=2)
 
-    def forward(self, x):
+        self.enc3_1 = CBR2d(in_channels=128, out_channels=256)
+        self.enc3_2 = CBR2d(in_channels=256, out_channels=256)
 
-        x = standarize_coeffs(x, ch_mean=self.ch_mean, ch_std=self.ch_std)
-        inx = self.inc(x)
+        self.pool3 = nn.MaxPool2d(kernel_size=2)
 
-        down1 = self.down1(inx)
-        conv1 = self.conv1(down1)
+        self.enc4_1 = CBR2d(in_channels=256, out_channels=512)
+        self.enc4_2 = CBR2d(in_channels=512, out_channels=512)
 
-        down2 = self.down2(conv1)
-        conv2 = self.conv2(down2)
+        self.pool4 = nn.MaxPool2d(kernel_size=2)
 
-        up1 = self.up1(conv2, conv1)
-        conv3 = self.conv3(up1)
+        self.enc5_1 = CBR2d(in_channels=512, out_channels=1024)
 
-        up2 = self.up2(conv3, inx)
-        conv4 = self.conv4(up2)
+        # Expansive path
+        self.dec5_1 = CBR2d(in_channels=1024, out_channels=512)
 
-        out = self.outc(conv4)
-        out = out + x
-        out = unstandarize_coeffs(out, ch_mean=self.ch_mean, ch_std=self.ch_std)
-        return out
+        self.unpool4 = nn.ConvTranspose2d(in_channels=512, out_channels=512,
+                                          kernel_size=2, stride=2, padding=0, bias=True)
 
+        self.dec4_2 = CBR2d(in_channels=2 * 512, out_channels=512)
+        self.dec4_1 = CBR2d(in_channels=512, out_channels=256)
 
-class single_conv(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super(single_conv, self).__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, 3, padding=1),
-            nn.ReLU(inplace=True)
-        )
+        self.unpool3 = nn.ConvTranspose2d(in_channels=256, out_channels=256,
+                                          kernel_size=2, stride=2, padding=0, bias=True)
+
+        self.dec3_2 = CBR2d(in_channels=2 * 256, out_channels=256)
+        self.dec3_1 = CBR2d(in_channels=256, out_channels=128)
+
+        self.unpool2 = nn.ConvTranspose2d(in_channels=128, out_channels=128,
+                                          kernel_size=2, stride=2, padding=0, bias=True)
+
+        self.dec2_2 = CBR2d(in_channels=2 * 128, out_channels=128)
+        self.dec2_1 = CBR2d(in_channels=128, out_channels=64)
+
+        self.unpool1 = nn.ConvTranspose2d(in_channels=64, out_channels=64,
+                                          kernel_size=2, stride=2, padding=0, bias=True)
+
+        self.dec1_2 = CBR2d(in_channels=2 * 64, out_channels=64)
+        self.dec1_1 = CBR2d(in_channels=64, out_channels=64)
+
+        self.fc = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=1, stride=1, padding=0, bias=True)
 
     def forward(self, x):
-        x = self.conv(x)
-        return x
+        enc1_1 = self.enc1_1(x)
+        enc1_2 = self.enc1_2(enc1_1)
+        pool1 = self.pool1(enc1_2)
 
+        enc2_1 = self.enc2_1(pool1)
+        enc2_2 = self.enc2_2(enc2_1)
+        pool2 = self.pool2(enc2_2)
 
-class up(nn.Module):
-    def __init__(self, in_ch):
-        super(up, self).__init__()
-        self.up = nn.ConvTranspose2d(in_ch, in_ch//2, 2, stride=2)
+        enc3_1 = self.enc3_1(pool2) 
+        enc3_2 = self.enc3_2(enc3_1)
+        pool3 = self.pool3(enc3_2)
 
-    def forward(self, x1, x2):
-        x1 = self.up(x1)
-        
-        # input is CHW
-        diffY = x2.size()[2] - x1.size()[2]
-        diffX = x2.size()[3] - x1.size()[3]
+        enc4_1 = self.enc4_1(pool3)
+        enc4_2 = self.enc4_2(enc4_1)
+        pool4 = self.pool4(enc4_2)
 
-        x1 = F.pad(x1, (diffX // 2, diffX - diffX//2,
-                        diffY // 2, diffY - diffY//2))
+        enc5_1 = self.enc5_1(pool4)
 
-        x = x2 + x1
-        return x
+        dec5_1 = self.dec5_1(enc5_1)
 
+        unpool4 = self.unpool4(dec5_1)
+        cat4 = torch.cat((unpool4, enc4_2), dim=1)
+        dec4_2 = self.dec4_2(cat4)
+        dec4_1 = self.dec4_1(dec4_2)
 
-class outconv(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super(outconv, self).__init__()
-        self.conv = nn.Conv2d(in_ch, out_ch, 1)
+        unpool3 = self.unpool3(dec4_1)
+        cat3 = torch.cat((unpool3, enc3_2), dim=1)
+        dec3_2 = self.dec3_2(cat3)
+        dec3_1 = self.dec3_1(dec3_2)
 
-    def forward(self, x):
-        x = self.conv(x)
+        unpool2 = self.unpool2(dec3_1)
+        cat2 = torch.cat((unpool2, enc2_2), dim=1)
+        dec2_2 = self.dec2_2(cat2)
+        dec2_1 = self.dec2_1(dec2_2)
+
+        unpool1 = self.unpool1(dec2_1)
+        cat1 = torch.cat((unpool1, enc1_2), dim=1)
+        dec1_2 = self.dec1_2(cat1)
+        dec1_1 = self.dec1_1(dec1_2)
+
+        x = self.fc(dec1_1)
+
         return x

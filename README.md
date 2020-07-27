@@ -14,5 +14,3 @@
 
 >>>python main.py --mode test --dataset piglet --use_cuda
 
-
-jedjdjdj~~
