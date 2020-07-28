@@ -32,7 +32,7 @@ class PIGLET(PatchData):
         super(PIGLET, self)._set_filesystem(data_dir)
 
         self.dir_hr = os.path.join(self.apath, 'full')
-        self.dir_lr = os.path.join(self.apath, 'quarter')
+        self.dir_lr = os.path.join(self.apath, 'Oten')
         self.ext = ('.tiff', '.tiff')
 
 

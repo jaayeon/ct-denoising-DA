@@ -51,10 +51,10 @@ def set_test_dir(opt):
     # else:
     #     test_dir_opt = model_opt + "-image"
 
+    test_dir_opt = model_opt + '-testset-{}'.format(opt.dataset)
+
     if opt.ensemble:
         test_dir_opt = test_dir_opt + "-ensemble"
-
-    test_dir_opt += '-testset-{}'.format(opt.dataset)
 
     #for linux server
     opt.test_result_dir = change_os_slash(opt.test_result_dir)

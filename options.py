@@ -130,7 +130,7 @@ elif args.dataset == 'mayo':
     args.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm'.format(args.thickness)
 elif args.dataset == 'piglet':
     args.gt_img_dir = r'../../data/denoising/test/piglet/full'
-    args.img_dir = r'../../data/denoising/test/piglet/quarter'
+    args.img_dir = r'../../data/denoising/test/piglet/Oten'
 
 if args.train_datasets is None:
     args.train_datasets = [args.dataset]
