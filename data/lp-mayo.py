@@ -22,6 +22,7 @@ class LPMAYO(PatchData):
 
         names_hr = []
         names_lr = []
+        print('body part : ',self.body_part)
         for bp in self.body_part : 
             names_hr.extend(glob.glob(os.path.join(self.dir_hr, '{}*'.format(bp), '*' + self.ext[0])))
             names_lr.extend(glob.glob(os.path.join(self.dir_lr, '{}*'.format(bp), '*' + self.ext[1])))
