@@ -40,29 +40,44 @@ class PatchData(data.Dataset):
             path_bin = os.path.join(self.apath, 'bin')
             os.makedirs(path_bin, exist_ok=True)
 
-        list_hr, list_lr = self._scan()
-
-        if args.ext.find('img') >= 0 or benchmark:
-            self.images_hr, self.images_lr = list_hr, list_lr
-        elif args.ext.find('sep') >= 0:
+        if args.use_pt : 
             self.images_hr, self.images_lr = [], []
-            for h in list_hr:
-                b = h.replace(self.apath, path_bin)
-                os.makedirs(os.path.dirname(b), exist_ok=True)
-
-                b = b.replace(self.ext[0], '.pt')
-                self.images_hr.append(b)
-                self._check_and_load(args.ext, h, b, verbose=True) 
-            for l in list_lr:
-                b = l.replace(self.apath, path_bin)
-                os.makedirs(os.path.dirname(b), exist_ok=True)
-
-                b = b.replace(self.ext[1], '.pt')
-                self.images_lr.append(b)
-                self._check_and_load(args.ext, l, b, verbose=True)
+            self.dir_hr = os.path.join(path_bin, self.dir_hr.split('/')[-1])
+            self.dir_lr = os.path.join(path_bin, self.dir_lr.split('/')[-1])
+            self.ext = ('.pt', '.pt')
+ 
+            self.images_hr, self.images_lr = self._scan()
+            print("[*]RESET FILE SYSTEM to PT FOLDER")
+            print("dir_hr:", os.path.abspath(self.dir_hr))
+            print("dir_lr:", os.path.abspath(self.dir_lr))
+            print('image length hr {} lr {}'.format(len(self.images_hr), len(self.images_lr)))
 
             if self.in_mem:
                 self._load2mem()
+        else : 
+            list_hr, list_lr = self._scan()
+
+            if args.ext.find('img') >= 0 or benchmark:
+                self.images_hr, self.images_lr = list_hr, list_lr
+            elif args.ext.find('sep') >= 0:
+                self.images_hr, self.images_lr = [], []
+                for h in list_hr:
+                    b = h.replace(self.apath, path_bin)
+                    os.makedirs(os.path.dirname(b), exist_ok=True)
+
+                    b = b.replace(self.ext[0], '.pt')
+                    self.images_hr.append(b)
+                    self._check_and_load(args.ext, h, b, verbose=True) 
+                for l in list_lr:
+                    b = l.replace(self.apath, path_bin)
+                    os.makedirs(os.path.dirname(b), exist_ok=True)
+
+                    b = b.replace(self.ext[1], '.pt')
+                    self.images_lr.append(b)
+                    self._check_and_load(args.ext, l, b, verbose=True)
+
+                if self.in_mem:
+                    self._load2mem()
             
         if mode == 'train':
             n_patches = args.batch_size * args.test_every #test_every : # of images per each epoch

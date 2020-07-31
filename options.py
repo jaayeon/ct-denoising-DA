@@ -53,10 +53,10 @@ parser.add_argument('--test_dir', type=str, default=test_dir,
                     help='Path of directory to be tested (no ground truth)')
 parser.add_argument('--test_result_dir', type=str, default=test_result_dir,
                     help='test result dir')
-parser.add_argument('--use_npy', default=False, action='store_true',
-                    help="Use npy files to load whole data into memory, Default: False")
 parser.add_argument('--in_mem', default=False, action='store_true',
                     help="Load whole data into memory, Default: False")
+parser.add_argument('--use_pt', default=False, action='store_true',
+                    help='use pt data, do not check img files')
 
 parser.add_argument("--test_patches", dest='test_patches', action='store_true',
                     help="Divide image into patches")
