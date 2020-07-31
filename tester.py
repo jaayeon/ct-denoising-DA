@@ -36,6 +36,10 @@ def run_test(opt, img_list, gt_img_list):
     if not os.path.exists(opt.test_result_dir):
         os.makedirs(opt.test_result_dir)
 
+    test_concat_dir = os.path.join(opt.test_result_dir, 'concat_img')
+    if not os.path.exists(test_concat_dir):
+        os.makedirs(test_concat_dir)
+
     img_list.sort()
     gt_img_list.sort()
 
@@ -55,6 +59,7 @@ def run_test(opt, img_list, gt_img_list):
         start_time = time.time()
         img_path = os.path.abspath(img_path)
         img_name = 'out_'+os.path.basename(img_path)
+        concat_name = 'concat_'+os.path.basename(img_path)
 
         print("[{}/{}] processing {}".format(img_idx, num_total_img, os.path.abspath(img_path)))
 
@@ -105,7 +110,9 @@ def run_test(opt, img_list, gt_img_list):
             # out = out.reshape(img_dims)
             # print("out.shape:", out.shape)
 
-        dst_img_path = os.path.join(opt.test_result_dir, img_name)
+        out_img_path = os.path.join(opt.test_result_dir, img_name)
+        concat_img_path = os.path.join(test_concat_dir, concat_name)
+        
 
         if opt.test_patches:
             out_tensor = mp.recon_tensor_arr_patches(out_tensor, input_img.shape[1], input_img.shape[0], opt.patch_size, opt.patch_offset)
@@ -138,8 +145,9 @@ def run_test(opt, img_list, gt_img_list):
         ))
 
         # print("out_img.shape:", out_img.shape)
-        # print(os.path.abspath(dst_img_path))
-        imsave(dst_img_path, concat_img)
+        # print(os.path.abspath(out_img_path))
+        imsave(concat_img_path, concat_img)
+        imsave(out_img_path, out_img)
 
     print(" #{:d} Test Average Noise Loss: {:.8f}, Average Noise PSNR: {:.8f}, Average Loss: {:.8f}, Average PSNR: {:.8f}".format(
         num, noise_avg_loss / num, noise_avg_psnr / num, avg_loss / num, avg_psnr / num
