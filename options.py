@@ -12,7 +12,7 @@ test_result_dir = os.path.join(data_dir, 'test_result_DA')
 parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'result'])
-parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr'])
+parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c'])
 parser.add_argument('--way', type=str, default='adv', choices=['base', 'adv'])
 
 parser.add_argument('--multi_gpu', default=False, action='store_true',
@@ -124,7 +124,12 @@ parser.add_argument("--start_epoch", type=int, default=1,
                     help="manual epoch number (useful on restarts)")
 parser.add_argument('--batch_size', type=int, default=32,
                     help='Size of the batches')
-parser.add_argument('--n_epochs', type=int, default=500)
+parser.add_argument('--n_epochs', type=int, default=200)
+
+
+#Unet
+parser.add_argument('--bilinear', type=str, default='bilinear', 
+                    help='up convolution type (bilinear or transposed2d)')
 
 args = parser.parse_args()
 
