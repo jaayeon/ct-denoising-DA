@@ -10,6 +10,8 @@ def set_model(opt):
         module_name = 'models.unet'
     elif opt.model == 'edsr':
         module_name = 'models.edsr'
+    elif opt.model == 'unet_c':
+        module_name = 'models.unet_c'    
     else:
         raise ValueError("Need to specify model (redcnn, dncnn)")
     
