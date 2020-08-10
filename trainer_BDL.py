@@ -111,7 +111,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             for param in net_D.parameters():
                 param.requires_grad=False
 
-            trg_outD = net_D(F.softmax(trg_out, dim=1), 0)
+            trg_outD = net_D(trg_out, 0)
             loss_trg_D_fake = net_D.loss  
 
             # loss_trg_M = opt.lambda_adv_target * loss_trg_D_fake + loss_trg_m    #target label exists
@@ -123,11 +123,11 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 param.requires_grad = True
 
             src_out, trg_out = src_out.detach(), trg_out.detach()
-            src_outD = net_D(F.softmax(src_out, dim=1),0)
+            src_outD = net_D(src_out,0)
             loss_src_D = net_D.loss / 2
             loss_src_D.backward() #update D 
 
-            trg_outD = net_D(F.softmax(trg_out, dim=1), 1)
+            trg_outD = net_D(trg_out, 1)
             loss_trg_D_real = net_D.loss / 2
             loss_trg_D_real.backward() #update D
 
@@ -169,13 +169,13 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_out = net(trg_img, trg_lbl)
                 loss_trg_m = net.loss
 
-                trg_outD = net_D(F.softmax(trg_out, dim=1), 0)
+                trg_outD = net_D(trg_out, 0)
                 loss_trg_D_fake = net_D.loss  
 
-                src_outD = net_D(F.softmax(src_out, dim=1),0)
+                src_outD = net_D(src_out,0)
                 loss_src_D = net_D.loss / 2
 
-                trg_outD = net_D(F.softmax(trg_out, dim=1), 1)
+                trg_outD = net_D(trg_out, 1)
                 loss_trg_D_real = net_D.loss / 2
 
                 valid_loss += loss_src_M
