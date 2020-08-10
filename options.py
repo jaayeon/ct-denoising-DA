@@ -12,7 +12,8 @@ test_result_dir = os.path.join(data_dir, 'test_result_DA')
 parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'result'])
-parser.add_argument('--model', type=str, default='edsr', choices=['dncnn', 'unet', 'edsr'])
+parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr'])
+parser.add_argument('--way', type=str, default='adv', choices=['base', 'adv'])
 
 parser.add_argument('--multi_gpu', default=False, action='store_true',
                     help='Use multiple GPUs')
@@ -39,8 +40,9 @@ parser.add_argument("--train_ratio", type=float, default=0.95,
 
 parser.add_argument('--ext', type=str, default='sep', choices=['sep', 'img'],
                     help='File extensions')
-parser.add_argument('--dataset', type=str, default='lp-mayo', choices=['lp-mayo', 'piglet', 'mayo'], required=True, 
+parser.add_argument('--source', type=str, default='lp-mayo', choices=['lp-mayo', 'piglet', 'mayo'], 
                     help='Specify dataset name (both in train & test)')
+parser.add_argument('--target', type=str, default='piglet', choices=['lp-mayo', 'piglet', 'mayo'])
 parser.add_argument('--train_datasets', nargs='+', default=None,
                     choices=['mayo','lp-mayo','pig'],
                     help='Specify dataset name (mayo or genoray)')
@@ -79,7 +81,7 @@ parser.add_argument('--thickness', type=int, default=3,
                     help='Specify thicknesses of mayo dataset (1 or 3 mm)')
 
 #lp-mayo dataset specifications
-parser.add_argument('--body_part', type=str, nargs='+', choices=['C', 'L', 'N'], default=['C','L','N'],
+parser.add_argument('--body_part', '-bp',type=str, nargs='+', choices=['C', 'L', 'N'], default='L',
                     help='choose body part in ldct-projection-mayo')
 
 #edsr
@@ -92,6 +94,8 @@ parser.add_argument('--test_every', type=int, default=1000,
                     help='do test per every N batches')
 parser.add_argument('--checkpoint_dir', type=str, default=checkpoint_dir,
                     help='Path to checkpoint directory')
+parser.add_argument('--checkpoint_dir_D', type=str, default=checkpoint_dir,
+                    help='Path to discriminator checkpoint directory')
 parser.add_argument('--select_checkpoint', default=False, action='store_true',
                     help='Choose checkpoint directory')
 parser.add_argument('--resume', default=False, action='store_true',
@@ -110,6 +114,8 @@ parser.add_argument("--optimizer", type=str, default='adam',
 parser.add_argument('--loss', type=str, default='l1', choices=['l1','l2'])
 parser.add_argument('--lr', type=float, default=0.0002,
                     help='Adam: learning rate')
+parser.add_argument('--lambda_adv_target', type=float, default=0.001, 
+                    help="lambda_adv for adversarial training.")
 parser.add_argument('--b1', type=float, default=0.9,
                     help='Adam: decay of first order momentum of gradient')
 parser.add_argument('--b2', type=float, default=0.999,
@@ -122,17 +128,17 @@ parser.add_argument('--n_epochs', type=int, default=500)
 
 args = parser.parse_args()
 
-if args.dataset == 'lp-mayo':
+if args.target == 'lp-mayo':
     args.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
     args.img_dir = r'../../data/denoising/test/lp-mayo/low'
-elif args.dataset == 'mayo':
+elif args.target == 'mayo':
     args.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm'.format(args.thickness)
     args.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm'.format(args.thickness)
-elif args.dataset == 'piglet':
+elif args.target == 'piglet':
     args.gt_img_dir = r'../../data/denoising/test/piglet/full'
     args.img_dir = r'../../data/denoising/test/piglet/Oten'
 
 if args.train_datasets is None:
-    args.train_datasets = [args.dataset]
+    args.train_datasets = [args.source]
 
 torch.manual_seed(args.seed)

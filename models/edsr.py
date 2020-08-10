@@ -22,6 +22,7 @@ class EDSR(nn.Module):
         # bias = not bn
         bias = True
         act = nn.ReLU(True)
+        self.Loss = nn.L1Loss()
 
         
         # pix_range = opt.pixel_range
@@ -49,7 +50,7 @@ class EDSR(nn.Module):
         self.body = nn.Sequential(*m_body)
         self.tail = nn.Sequential(*m_tail)
 
-    def forward(self, x):
+    def forward(self, x, lbl):
         # x = self.sub_mean(x)
 
         global_res = x
@@ -66,6 +67,7 @@ class EDSR(nn.Module):
 
         out = x
         # out = self.add_mean(x)
+        self.loss = self.Loss(out, lbl)
 
         return out
 

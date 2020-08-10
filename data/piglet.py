@@ -6,7 +6,6 @@ import numpy as np
 import torch
 import torch.utils.data as data
 
-from data.common import augment, is_image_file, load_img
 from data.patchdata import PatchData
 from data import common
 

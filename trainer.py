@@ -24,8 +24,8 @@ def run_train(opt, training_dataloader, valid_dataloader):
     net = set_model(opt)
     print(net)
 
-    if opt.use_cuda:
-        net = net.to(opt.device)
+    # if opt.use_cuda:
+    #     net = net.to(opt.device)
     
     print("Setting Optimizer")
     if opt.optimizer == 'adam':

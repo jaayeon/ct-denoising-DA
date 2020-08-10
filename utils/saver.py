@@ -18,7 +18,7 @@ def load_config(opt):
     patch_size = opt.patch_size
     test_patches = opt.test_patches
     patch_offset = opt.patch_offset
-    dataset = opt.dataset
+    target = opt.target
 
     checkpoint_dir = select_checkpoint_dir(opt)
     
@@ -36,15 +36,15 @@ def load_config(opt):
     opt.patch_size = patch_size
     opt.test_patches = test_patches
     opt.patch_offset = patch_offset
-    opt.dataset = dataset
+    opt.target = target
 
-    if opt.dataset == 'lp-mayo':
+    if opt.target == 'lp-mayo':
         opt.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
         opt.img_dir = r'../../data/denoising/test/lp-mayo/low'
-    elif opt.dataset == 'mayo':
+    elif opt.target == 'mayo':
         opt.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm'.format(opt.thickness)
         opt.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm'.format(opt.thickness)
-    elif opt.dataset == 'piglet':
+    elif opt.target == 'piglet':
         opt.gt_img_dir = r'../../data/denoising/test/piglet/full'
         opt.img_dir = r'../../data/denoising/test/piglet/Oten'
 
@@ -67,12 +67,21 @@ def select_checkpoint_dir(opt):
 
     return checkpoint_dir
 
-def save_checkpoint(opt, model, optimizer, epoch, loss):
+def save_checkpoint(opt, model, optimizer, epoch, loss, model_type='M'):
     # checkpoint_dir = os.path.join(opt.checkpoint_dir, opt.model + '-patch' + str(opt.patch_size))
-    checkpoint_dir = opt.checkpoint_dir
+    if model_type == 'M' : 
+        checkpoint_dir = opt.checkpoint_dir
+        model_name = opt.model
+    elif model_type == 'D' : 
+        checkpoint_dir = opt.checkpoint_dir_D
+        model_name = 'discriminator'
+    else : 
+        print("Wrong model type", model_type)
+        raise KeyboardInterrupt
+
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
-    checkpoint_path = os.path.join(checkpoint_dir, "models_epoch_%04d_loss_%.8f.pth" % (epoch, loss))
+    checkpoint_path = os.path.join(checkpoint_dir, "%s_epoch_%04d_loss_%.8f.pth" % (model_name, epoch, loss))
     checkpoint_path = os.path.abspath(checkpoint_path)
     
     if torch.cuda.device_count() > 1 and opt.multi_gpu:

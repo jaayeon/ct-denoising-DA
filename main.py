@@ -1,6 +1,7 @@
-from data import get_train_valid_dataloader, get_test_img_list, get_test_noisy_list, get_train_dataloader
+from data import get_train_valid_dataloader, get_test_img_list
 
 import trainer as T
+import trainer_BDL as BT
 import tester as TST
 import tester_lpmayo as TSTM
 
@@ -13,9 +14,14 @@ if __name__ == '__main__':
     if opt.mode == 'train':
         print(opt)
 
-        train_data_loader, valid_data_loader = get_train_valid_dataloader(opt)
-        # only_train_data_loader = get_train_dataloader(opt)
-        T.run_train(opt, train_data_loader, valid_data_loader)
+        if opt.way == 'adv':
+            train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
+            train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target)
+            BT.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
+        elif opt.way == 'base':
+            train_data_loader, valid_data_loader = get_train_valid_dataloader(opt)
+            # only_train_data_loader = get_train_dataloader(opt)
+            T.run_train(opt, train_data_loader, valid_data_loader)
 
     elif opt.mode == 'test':
         # opt.resume_best = True

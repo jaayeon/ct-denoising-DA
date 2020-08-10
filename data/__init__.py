@@ -33,11 +33,15 @@ def get_module_attr(dataset):
 
 
 
-def get_train_valid_dataloader(args):
+def get_train_valid_dataloader(args, train_datasets=None):
     datasets = []
+    if train_datasets == None:
+        train_datasets = args.train_datasets
+    else : 
+        train_datasets = [train_datasets]
     
-    print("Train datasets: ", args.train_datasets)
-    for d in args.train_datasets:
+    print("Train datasets: ", train_datasets)
+    for d in train_datasets:
         # module_name = d
         module_name, attr = get_module_attr(d)
         m = import_module('data.' + module_name.lower())
@@ -73,30 +77,6 @@ def get_train_valid_dataloader(args):
 
 
 
-def get_train_dataloader(args):
-
-    datasets = []
-
-    module_name, attr = get_module_attr(args.dataset)
-    m = import_module('data.' + module_name.lower())
-
-    datasets.append(getattr(m, attr)(args, name=args.dataset))
-
-    train_ds = MyConcatDataset(datasets)
-    train_len = len(train_ds)
-    
-    print("Number of train dataset samples:", train_len)
-    print("Threading {}".format(args.n_threads))
-
-    train_data_loader = DataLoader(dataset=train_ds,
-                                batch_size=args.batch_size,
-                                shuffle=True,
-                                pin_memory=True,
-                                num_workers=args.n_threads)
-
-    return train_data_loader
-
-
 
 def get_test_img_list(opt):
     img_list = glob.glob(os.path.join(opt.img_dir, '*', '*'))
@@ -106,9 +86,3 @@ def get_test_img_list(opt):
     # print(gt_img_list)
     print('test img low path : {}\n test img high path : {}'.format(opt.img_dir, opt.gt_img_dir))
     return img_list, gt_img_list
-
-
-def get_test_noisy_list(opt):
-    img_list = [os.path.join(opt.img_dir, x) for x in os.listdir(opt.img_dir)]
-    # print(img_list)
-    return img_list

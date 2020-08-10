@@ -6,65 +6,6 @@ import skimage.color as sc
 
 import torch
 
-def is_image_file(filename):
-    return any(filename.endswith(extension) for extension in [".PNG", ".png", ".tiff"])
-
-def load_img(file_path):
-    img = imread(file_path)
-    # img = normalize(img)
-    return img
-
-def add_gaussian_noise(image, mean=0, std=0.001):
-    img_dims = image.shape
-    
-    sigma = std
-    gauss = np.random.normal(mean, sigma, img_dims)
-    gauss = gauss.reshape(img_dims[0], img_dims[1], img_dims[2])
-    # noisy = image + gauss
-    noisy = image
-    return noisy
-
-# def add_noise(x, noise=None):
-#     if noise is not None:
-#         noise_type = noise[0]
-#         noise_value = int(noise[1:])
-#         if noise_type == 'G':
-#             noises = np.random.normal(scale=noise_value, size=x.shape)
-#             noises = noises.round()
-#         elif noise_type == 'S':
-#             noises = np.random.poisson(x * noise_value) / noise_value
-#             noises = noises - noises.mean(axis=0).mean(axis=0)
-
-#         x_noise = x.astype(np.int16) + noises.astype(np.int16)
-#         x_noise = x_noise.clip(0, 255).astype(np.uint8)
-#         return x_noise
-#     else:
-#         return x
-
-def add_noise(x, noise=None):
-    if noise == 0:
-        noise_value = np.random.randint(25)
-    else:
-        noise_value = noise
-
-    noises = np.random.normal(scale=noise_value, size=x.shape)
-    noises = noises.round()
-        
-    x_noise = x.astype(np.int16) + noises.astype(np.int16)
-    x_noise = x_noise.clip(0, 255).astype(np.uint8)
-    return x_noise
-
-def add_blind_noise(x, noise=None):
-    noise_value = np.random.randint(25)
-    
-    noises = np.random.normal(scale=noise_value, size=x.shape)
-    noises = noises.round()
-
-    x_noise = x.astype(np.int16) + noises.astype(np.int16)
-    x_noise = x_noise.clip(0, 255).astype(np.uint8)
-
-    return x_noise
-
 def augment(*args, hflip=True, rot=True):
     hflip = hflip and random.random() < 0.5
     vflip = rot and random.random() < 0.5

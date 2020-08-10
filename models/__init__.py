@@ -16,4 +16,18 @@ def set_model(opt):
     module = import_module(module_name)
     model = module.make_model(opt)
 
+    if opt.use_cuda:
+        model = model.to(opt.device)
+
     return model
+
+
+def set_model_D(opt):
+    module_name = 'models.discriminator'
+    module = import_module(module_name)
+    model_D = module.make_model(opt)
+
+    if opt.use_cuda :
+        model_D = model_D.to(opt.device)
+
+    return model_D

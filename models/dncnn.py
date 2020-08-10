@@ -17,6 +17,7 @@ class DnCNN(nn.Module):
         layers = []
 
         n_channels = opt.n_channels
+        self.Loss = nn.L1Loss()
 
         layers.append(nn.Conv2d(in_channels=n_channels, out_channels = features, kernel_size = kernel_size, padding = padding, bias = False))
         layers.append(nn.ReLU(inplace=True))
@@ -28,8 +29,10 @@ class DnCNN(nn.Module):
         layers.append(nn.Conv2d(in_channels=features, out_channels=n_channels, kernel_size=kernel_size, padding=padding, bias=False))
         self.dncnn = nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x, lbl):
         
         y = x
         out = self.dncnn(x)
+        self.loss = self.Loss(y-out, lbl)
+
         return y - out
