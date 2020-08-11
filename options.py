@@ -29,7 +29,7 @@ parser.add_argument("--n_threads", type=int, default=6,
 parser.add_argument('--seed', type=int, default=1,
                     help='Random seed')
 
-parser.add_argument('--patch_size', type=int, default=60,
+parser.add_argument('--patch_size', type=int, default=80,
                     help='Size of patch')
 parser.add_argument('--patch_offset', type=int, default=15,
                     help='Size of patch offset')
