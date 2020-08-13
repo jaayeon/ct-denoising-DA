@@ -54,7 +54,7 @@ class UNet(nn.Module):
 
         self.outc = outconv(64, c)
 
-    def forward(self, x, lbl):
+    def forward(self, x, lbl=None):
 
         #x = standarize_coeffs(x, ch_mean=self.ch_mean, ch_std=self.ch_std)
         inx = self.inc(x)
@@ -74,7 +74,10 @@ class UNet(nn.Module):
         out = self.outc(conv4)
         out = out + x
         #out = unstandarize_coeffs(out, ch_mean=self.ch_mean, ch_std=self.ch_std)
-        self.loss = self.Loss(out, lbl)
+        if lbl == None:
+            pass
+        else : 
+            self.loss = self.Loss(out, lbl)
         
         return out
 

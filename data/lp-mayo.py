@@ -46,7 +46,10 @@ class LPMAYO(PatchData):
         super(LPMAYO, self)._set_filesystem(data_dir)
 
         self.dir_hr = os.path.join(self.apath, 'full')
-        self.dir_lr = os.path.join(self.apath, 'low')
+        if 'cyc1' in self.args.way:
+            self.dir_lr = os.path.join(self.apath, 'fake_low')
+        else : 
+            self.dir_lr = os.path.join(self.apath, 'low')
         self.ext = ('.tiff', '.tiff')
 
 

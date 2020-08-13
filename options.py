@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'result'])
 parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c'])
-parser.add_argument('--way', type=str, default='adv', choices=['base', 'adv'])
+parser.add_argument('--way', type=str, default='adv', nargs='+', choices=['base', 'adv', 'cyc1'])
 
 parser.add_argument('--multi_gpu', default=False, action='store_true',
                     help='Use multiple GPUs')

@@ -14,11 +14,11 @@ if __name__ == '__main__':
     if opt.mode == 'train':
         print(opt)
 
-        if opt.way == 'adv':
+        if 'adv' in opt.way:
             train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
             train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target)
             BT.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
-        elif opt.way == 'base':
+        elif 'base' in opt.way:
             train_data_loader, valid_data_loader = get_train_valid_dataloader(opt)
             # only_train_data_loader = get_train_dataloader(opt)
             T.run_train(opt, train_data_loader, valid_data_loader)
@@ -28,7 +28,7 @@ if __name__ == '__main__':
         opt = load_config(opt)
         print(opt)
         img_list, gt_img_list = get_test_img_list(opt)
-        if opt.dataset == 'lp-mayo':
+        if opt.target == 'lp-mayo':
             TSTM.run_test(opt, img_list, gt_img_list)
         else :
             TST.run_test(opt, img_list, gt_img_list)
