@@ -17,3 +17,13 @@ test
 '''
 >>python main.py --mode test --dataset piglet --use_cuda
 '''
+
+train with cyclegan output with no adversarial loss
+'''
+>>python main.py --way base cyc1 --use_pt
+'''
+
+train with cyclegan output with adversarial loss
+'''
+>>python main.py --way adv cyc1 --use_pt
+'''
