@@ -8,7 +8,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from utils.helper import set_checkpoint_dir, set_gpu
 from utils.saver import load_model, save_checkpoint, save_config
 from models import set_model, set_model_D
-import wgan_loss, ssim_loss
+from models.losses import wgan_loss, ssim_loss
+
 
 def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     opt= set_gpu(opt)

@@ -14,8 +14,7 @@ parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'result'])
 parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c'])
 parser.add_argument('--model_d', type=str, default='discriminator', choices=['discriminator', 'wgan'])
-parser.add_argument('--way', type=str, default='adv', choices=['base', 'adv'])
-parser.add_argument('--trainer_type', type=str, default='trainer_BDL', choices=['trainer_BDL', 'trainer_BDLW'])
+parser.add_argument('--way', type=str, default='adv', choices=['base', 'adv', 'wadv'])
 parser.add_argument('--ssim_loss', default=True, action='store_true',
                     help='Use ssim loss')
 

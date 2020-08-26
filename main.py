@@ -18,15 +18,20 @@ if __name__ == '__main__':
         if opt.way == 'adv':
             train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
             train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target)
-            if opt.trainer_type == 'trainer_BDL':
-                BT.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
-            else:
-                BTW.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
+            BT.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
+         
 
         elif opt.way == 'base':
             train_data_loader, valid_data_loader = get_train_valid_dataloader(opt)
             # only_train_data_loader = get_train_dataloader(opt)
             T.run_train(opt, train_data_loader, valid_data_loader)
+
+        
+        elif opt.way == 'wadv':
+            train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
+            train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target)
+            BTW.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
+
 
     elif opt.mode == 'test':
         # opt.resume_best = True
