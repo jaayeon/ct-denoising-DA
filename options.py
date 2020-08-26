@@ -13,7 +13,12 @@ parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'result'])
 parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c'])
+parser.add_argument('--model_d', type=str, default='discriminator', choices=['discriminator', 'wgan'])
 parser.add_argument('--way', type=str, default='adv', choices=['base', 'adv'])
+parser.add_argument('--trainer_type', type=str, default='trainer_BDL', choices=['trainer_BDL', 'trainer_BDLW'])
+parser.add_argument('--ssim_loss', default=True, action='store_true',
+                    help='Use ssim loss')
+
 
 parser.add_argument('--multi_gpu', default=False, action='store_true',
                     help='Use multiple GPUs')
@@ -24,7 +29,7 @@ parser.add_argument('--use_cpu', dest='use_cuda', action='store_true',
 parser.set_defaults(use_cuda=True)
 parser.add_argument('--device', type=str, default='cpu',
                     help='CPU or GPU')
-parser.add_argument("--n_threads", type=int, default=6,
+parser.add_argument("--n_threads", type=int, default=2,
                     help="Number of threads for data loader to use, Default: 8")
 parser.add_argument('--seed', type=int, default=1,
                     help='Random seed')
@@ -130,6 +135,13 @@ parser.add_argument('--n_epochs', type=int, default=200)
 #Unet
 parser.add_argument('--bilinear', type=str, default='bilinear', 
                     help='up convolution type (bilinear or transposed2d)')
+
+#WGAN
+parser.add_argument('--lambda_gp', type=float, default= 10, 
+                    help='lambda_gp for wgan discriminator loss')
+
+parser.add_argument('--wgan_loss', default=False, action='store_true',
+                    help='include wgan_loss to generator or not')
 
 args = parser.parse_args()
 

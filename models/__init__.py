@@ -25,7 +25,11 @@ def set_model(opt):
 
 
 def set_model_D(opt):
-    module_name = 'models.discriminator'
+    if opt.model_d == 'discriminator':
+        module_name = 'models.discriminator'
+    else:
+        module_name = 'models.wgan_discriminator'
+        
     module = import_module(module_name)
     model_D = module.make_model(opt)
 

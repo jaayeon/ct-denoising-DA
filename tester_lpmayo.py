@@ -58,7 +58,7 @@ def run_test(opt, img_list, gt_img_list):
     N_noise_avg_loss = 0.0
     N_noise_avg_psnr = 0.0
     for img_idx, path in enumerate(zip(img_list,gt_img_list),1):
-
+    
         img_path = path[0]
         # print('img_path : ', img_path)
         gt_img_path = path[1]

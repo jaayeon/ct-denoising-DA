@@ -24,6 +24,7 @@ def run_test(opt, img_list, gt_img_list):
     print(net)
 
     opt = set_gpu(opt)
+    opt.device = 'cpu'
 
     if opt.use_cuda:
         net = net.to(opt.device)
@@ -88,6 +89,7 @@ def run_test(opt, img_list, gt_img_list):
 
         input_tensor_shape = input_tensor.shape
         input_tensor = input_tensor.type(torch.FloatTensor)
+        out = torch.ones(input_tensor_shape)
 
         if opt.use_cuda:
             input_tensor = input_tensor.to(opt.device)
@@ -102,7 +104,7 @@ def run_test(opt, img_list, gt_img_list):
                     print("input_tensor[{}:{}].shape: {}".format(i, i+1, input_tensor[i:i+1].shape))
                     out_tensor[i] = forward_ensemble(input_tensor[i:i+1], net=net, device=opt.device)
             else:
-                out_tensor = net(input_tensor)
+                out_tensor = net(input_tensor,out)
             # print("out_tensor:", out_tensor.size())
 
             out_tensor = out_tensor.to(opt.device)
