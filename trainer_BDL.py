@@ -44,7 +44,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         net = nn.DataParallel(net)
         net_D = nn.DataParallel(net_D)
 
-    scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5, mode='min')
+    scheduler = ReduceLROnPlateau(optimizer, factor=0.9, patience=5, mode='min')
+    scheduler_D = ReduceLROnPlateau(optimizer_D, factor=0.9, patience=5, mode='min')
 
     # Setting loss function
     if opt.loss == 'l1':
@@ -80,6 +81,11 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     loss = ['loss_src_M', 'loss_trg_m', 'loss_trg_D_fake', 'loss_src_D', 'loss_trg_D_real']
     for epoch in range(opt.start_epoch, opt.n_epochs):
         opt.epoch_num = epoch
+
+        for param_group in optimizer.param_groups:
+            print('optim lr : ', param_group['lr'])
+        for param_group in optimizer_D.param_groups:
+            print("optim D lr : ", param_group['lr'])
 
         train_psnr = 0.0
         train_loss = 0.0
@@ -195,6 +201,9 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         valid_loss = valid_loss/iteration_v
         train_loss_D = train_loss_D/iteration_t
         valid_loss_D = valid_loss_D/iteration_v
+
+        scheduler.step(valid_loss)
+        scheduler_D.step(valid_loss_D)
 
         with open(log_file, mode='a') as f:
             f.write("%d,%08f,%08f,%08f,%08f,%08f,%08f"%(

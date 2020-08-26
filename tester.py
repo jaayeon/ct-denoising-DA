@@ -49,8 +49,10 @@ def run_test(opt, img_list, gt_img_list):
     num = 0
     avg_loss = 0.0
     avg_psnr = 0.0
+    avg_ssim = 0.0
     noise_avg_loss = 0.0
     noise_avg_psnr = 0.0
+    noise_avg_ssim = 0.0
     for img_idx, path in enumerate(zip(img_list,gt_img_list),1):
 
         img_path = path[0]
@@ -124,7 +126,7 @@ def run_test(opt, img_list, gt_img_list):
         else:
             out_img_tensor = out_tensor
 
-        noise_loss, noise_psnr, batch_loss, batch_psnr = calc_metrics(input_img_tensor, out_img_tensor, gt_img_tensor)
+        noise_loss, noise_psnr, noise_ssim, batch_loss, batch_psnr, batch_ssim = calc_metrics(input_img_tensor, out_img_tensor, gt_img_tensor)
         # print('nl : {:.8f}, np : {:.8f}, ol : {:.8f}, op : {:.8f}'.format(noise_loss, noise_psnr, batch_loss, batch_psnr))
         
         #only for gray scale img
@@ -138,12 +140,14 @@ def run_test(opt, img_list, gt_img_list):
         num += 1
         avg_loss += batch_loss
         avg_psnr += batch_psnr
+        avg_ssim += batch_ssim
         noise_avg_loss += noise_loss
         noise_avg_psnr += noise_psnr
+        noise_avg_ssim += noise_ssim
 
 
-        print("** Test {:.3f}s => Image({}/{}): Noise Loss: {:.8f}, Noise PSNR: {:.8f}, Loss: {:.8f}, PSNR: {:.8f}".format(
-            time.time() - start_time, img_idx, num_total_img, noise_loss.item(), noise_psnr.item(), batch_loss.item(), batch_psnr.item()
+        print("** Test {:.3f}s => Image({}/{}): Noise Loss: {:.8f}, Noise PSNR: {:.8f}, Noise SSIM: {:.8f}, Loss: {:.8f}, PSNR: {:.8f}, SSIM: {:.8f}".format(
+            time.time() - start_time, img_idx, num_total_img, noise_loss.item(), noise_psnr.item(), noise_ssim.item(), batch_loss.item(), batch_psnr.item(), batch_ssim.item()
         ))
 
         # print("out_img.shape:", out_img.shape)
@@ -151,8 +155,8 @@ def run_test(opt, img_list, gt_img_list):
         imsave(concat_img_path, concat_img)
         imsave(out_img_path, out_img)
 
-    print(" #{:d} Test Average Noise Loss: {:.8f}, Average Noise PSNR: {:.8f}, Average Loss: {:.8f}, Average PSNR: {:.8f}".format(
-        num, noise_avg_loss / num, noise_avg_psnr / num, avg_loss / num, avg_psnr / num
+    print(" #{:d} Test Average Noise Loss: {:.8f}, Average Noise PSNR: {:.8f}, Average Noise SSIM: {:.8f}, Average Loss: {:.8f}, Average PSNR: {:.8f}, Average SSIM: {:.8f}".format(
+        num, noise_avg_loss / num, noise_avg_psnr / num, noise_avg_ssim / num, avg_loss / num, avg_psnr / num, avg_ssim / num
     ))
 
     print("---Time: %.4fs\n" % (time.time() - start_time))

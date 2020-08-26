@@ -131,6 +131,7 @@ def run_train(opt, training_dataloader, valid_dataloader):
             else:
                 valid_loss = epoch_avg_loss
                 valid_psnr = epoch_avg_psnr
+                scheduler.step(valid_loss)
                 print("Valid LOSS avg : {:5f}\nValid PSNR avg : {:5f}".format(valid_loss, valid_psnr))
 
         with open(log_file, mode='a') as f:
