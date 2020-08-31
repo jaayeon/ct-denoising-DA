@@ -75,6 +75,9 @@ def save_checkpoint(opt, model, optimizer, epoch, loss, model_type='M'):
     elif model_type == 'D' : 
         checkpoint_dir = opt.checkpoint_dir_D
         model_name = 'discriminator'
+    elif model_type == 'auto':
+        checkpoint_dir = opt.checkpoint_dir_auto
+
     else : 
         print("Wrong model type", model_type)
         raise KeyboardInterrupt

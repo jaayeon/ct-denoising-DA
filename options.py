@@ -12,11 +12,14 @@ test_result_dir = os.path.join(data_dir, 'test_result_DA')
 parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'result'])
-parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c'])
-parser.add_argument('--model_d', type=str, default='discriminator', choices=['discriminator', 'wgan'])
-parser.add_argument('--way', type=str, default='adv', choices=['base', 'adv', 'wadv'])
+parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c', 'auto'])
+parser.add_argument('--model_d', type=str, default='wgan', choices=['discriminator', 'wgan'])
+parser.add_argument('--way', type=str, default='wadv', choices=['base', 'adv', 'wadv', 'self'])
 parser.add_argument('--ssim_loss', default=True, action='store_true',
                     help='Use ssim loss')
+parser.add_argument('--auto', default=True, action='store_true',
+                    help='self-supervised learning')
+
 
 
 parser.add_argument('--multi_gpu', default=False, action='store_true',
@@ -142,15 +145,23 @@ parser.add_argument('--lambda_gp', type=float, default= 10,
 parser.add_argument('--wgan_loss', default=False, action='store_true',
                     help='include wgan_loss to generator or not')
 
+#self-supervised
+parser.add_argument('--noise', default=True, action='store_true',
+                    help='include noise')
+parser.add_argument('--noise_typ', type=str, default='gauss', choices=['s&p','poisson','speckle'])
+
+
+
+
 args = parser.parse_args()
 
-if args.target == 'lp-mayo':
+if args.source == 'lp-mayo':
     args.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
     args.img_dir = r'../../data/denoising/test/lp-mayo/low'
-elif args.target == 'mayo':
+elif args.source == 'mayo':
     args.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm'.format(args.thickness)
     args.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm'.format(args.thickness)
-elif args.target == 'piglet':
+elif args.source == 'piglet':
     args.gt_img_dir = r'../../data/denoising/test/piglet/full'
     args.img_dir = r'../../data/denoising/test/piglet/Oten'
 

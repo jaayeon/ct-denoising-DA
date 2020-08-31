@@ -3,6 +3,7 @@ from data import get_train_valid_dataloader, get_test_img_list
 import trainer as T
 import trainer_BDL as BT
 import trainer_BDLW as BTW
+import trainer_SELF as BTS
 import tester as TST
 import tester_lpmayo as TSTM
 
@@ -15,7 +16,7 @@ if __name__ == '__main__':
     if opt.mode == 'train':
         print(opt)
 
-        if 'adv' in opt.way:
+        if opt.way == 'adv':
             train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
             train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target)
             BT.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
@@ -31,6 +32,10 @@ if __name__ == '__main__':
             train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
             train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target)
             BTW.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
+
+        elif opt.way == 'self':
+            train_self_loader, valid_self_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
+            BTS.run_train(opt, train_self_loader, valid_self_loader)
 
 
     elif opt.mode == 'test':
