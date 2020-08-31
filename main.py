@@ -15,7 +15,7 @@ if __name__ == '__main__':
     if opt.mode == 'train':
         print(opt)
 
-        if 'adv' in opt.way:
+        if opt.way == 'adv':
             train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
             train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target)
             BT.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
