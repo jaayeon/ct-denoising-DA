@@ -15,7 +15,7 @@ parser.add_argument('--mode', type=str, default='train', choices=['train', 'test
 parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c'])
 parser.add_argument('--model_d', type=str, default='discriminator', choices=['discriminator', 'wgan'])
 parser.add_argument('--way', type=str, default='adv', choices=['base', 'adv', 'wadv'])
-parser.add_argument('--ssim_loss', default=True, action='store_true',
+parser.add_argument('--ssim_loss', default=False, action='store_true',
                     help='Use ssim loss')
 
 

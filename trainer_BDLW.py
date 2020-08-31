@@ -110,7 +110,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
             if opt.ssim_loss == True:
                 ssimloss = ssim_loss.SSIM(window_size = 11)
-                loss_src_M += ssimloss(src_img, src_lbl) 
+                loss_src_M += (1-ssimloss(src_out, src_lbl))
             
             # M with target Denoising
             trg_out = net(trg_img, trg_lbl)
