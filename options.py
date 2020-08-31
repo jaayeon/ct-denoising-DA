@@ -15,7 +15,7 @@ parser.add_argument('--mode', type=str, default='train', choices=['train', 'test
 parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c', 'auto'])
 parser.add_argument('--model_d', type=str, default='wgan', choices=['discriminator', 'wgan'])
 parser.add_argument('--way', type=str, default='wadv', choices=['base', 'adv', 'wadv', 'self'])
-parser.add_argument('--ssim_loss', default=True, action='store_true',
+parser.add_argument('--ssim_loss', default=False, action='store_true',
                     help='Use ssim loss')
 parser.add_argument('--auto', default=True, action='store_true',
                     help='self-supervised learning')
@@ -47,9 +47,9 @@ parser.add_argument("--train_ratio", type=float, default=0.95,
 
 parser.add_argument('--ext', type=str, default='sep', choices=['sep', 'img'],
                     help='File extensions')
-parser.add_argument('--source', type=str, default='lp-mayo', choices=['lp-mayo', 'piglet', 'mayo'], 
+parser.add_argument('--source', type=str, default='lp-mayo', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo'], 
                     help='Specify dataset name (both in train & test)')
-parser.add_argument('--target', type=str, default='piglet', choices=['lp-mayo', 'piglet', 'mayo'])
+parser.add_argument('--target', type=str, default='piglet', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo'])
 parser.add_argument('--train_datasets', nargs='+', default=None,
                     choices=['mayo','lp-mayo','pig'],
                     help='Specify dataset name (mayo or genoray)')
@@ -164,6 +164,9 @@ elif args.source == 'mayo':
 elif args.source == 'piglet':
     args.gt_img_dir = r'../../data/denoising/test/piglet/full'
     args.img_dir = r'../../data/denoising/test/piglet/Oten'
+elif args.target == 'fake-lp-mayo':
+    args.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
+    args.img_dir = r'../../data/denoising/test/fake_low'
 
 if args.train_datasets is None:
     args.train_datasets = [args.source]
