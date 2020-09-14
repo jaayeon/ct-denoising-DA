@@ -12,7 +12,7 @@ test_result_dir = os.path.join(data_dir, 'test_result_DA')
 parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'result'])
-parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c', 'auto'])
+parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c'])
 parser.add_argument('--model_d', type=str, default='wgan', choices=['discriminator', 'wgan'])
 parser.add_argument('--way', type=str, default='wadv', choices=['base', 'adv', 'wadv', 'self'])
 parser.add_argument('--ssim_loss', default=False, action='store_true',
@@ -146,7 +146,7 @@ parser.add_argument('--wgan_loss', default=False, action='store_true',
                     help='include wgan_loss to generator or not')
 
 #self-supervised
-parser.add_argument('--noise', default=True, action='store_true',
+parser.add_argument('--noise', default=False, action='store_true',
                     help='include noise')
 parser.add_argument('--noise_typ', type=str, default='gauss', choices=['s&p','poisson','speckle'])
 
