@@ -117,7 +117,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             for param in net_D.parameters():
                 param.requires_grad=False
 
-            trg_outD = net_D(trg_out, 0)
+            trg_outD = net_D(trg_out-trg_img, 0.5)
             loss_trg_D_fake = net_D.loss  
 
             # loss_trg_M = opt.lambda_adv_target * loss_trg_D_fake + loss_trg_m    #target label exists
@@ -129,11 +129,11 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 param.requires_grad = True
 
             src_out, trg_out = src_out.detach(), trg_out.detach()
-            src_outD = net_D(src_out,0)
+            src_outD = net_D(src_out-src_img,0)
             loss_src_D = net_D.loss / 2
             loss_src_D.backward() #update D 
 
-            trg_outD = net_D(trg_out, 1)
+            trg_outD = net_D(trg_out-trg_img, 1)
             loss_trg_D_real = net_D.loss / 2
             loss_trg_D_real.backward() #update D
 
@@ -147,9 +147,9 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             psnr = 10* math.log10(1 / mse_loss.item())
             train_psnr += psnr
 
-            print("%s %.2fs => Epoch[%d/%d](%d/%d): \nloss_src_M : %.5f loss_trg_m : %.5f loss_trg_D_fake : %.5f loss_src_D : %.5f loss_trg_D_real : %.5f"%(
-                'Training', time.time()-start_train, epoch, opt.n_epochs, iteration_t, len(src_t_loader), loss_src_M, loss_trg_m, loss_trg_D_fake, loss_src_D, loss_trg_D_real))
-            print("PSNR : %.5f avg_PSNR : %.5f avg_LOSS : %.5f avg_LOSS_D : %.5f"%(psnr, train_psnr/iteration_t, train_loss/iteration_t, train_loss_D/iteration_t))
+            print("%s %.2fs => Epoch[%d/%d](%d/%d): loss_src_M : %.5f loss_trg_m : %.5f loss_trg_D_fake : %.5f loss_src_D : %.5f loss_trg_D_real : %.5f PSNR : %.5f"%(
+                'Training', time.time()-start_train, epoch, opt.n_epochs, iteration_t, len(src_t_loader), loss_src_M, loss_trg_m, loss_trg_D_fake, loss_src_D, loss_trg_D_real, psnr))
+            # print("PSNR : %.5f avg_PSNR : %.5f avg_LOSS : %.5f avg_LOSS_D : %.5f"%(psnr, train_psnr/iteration_t, train_loss/iteration_t, train_loss_D/iteration_t))
         
 
         valid_psnr = 0.0
@@ -175,24 +175,26 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_out = net(trg_img, trg_lbl)
                 loss_trg_m = net.loss
 
-                trg_outD = net_D(trg_out, 0)
+                trg_outD = net_D(trg_out-trg_img, 0.5)
                 loss_trg_D_fake = net_D.loss  
 
-                src_outD = net_D(src_out,0)
+                src_outD = net_D(src_out-src_img,0)
                 loss_src_D = net_D.loss / 2
 
-                trg_outD = net_D(trg_out, 1)
+                trg_outD = net_D(trg_out-trg_img, 1)
                 loss_trg_D_real = net_D.loss / 2
 
                 valid_loss += loss_src_M
                 valid_loss_D += loss_src_D
                 valid_loss_D += loss_trg_D_real
                 mse_loss = mse_criterion(trg_out, trg_lbl)
+                nmse_loss = mse_criterion(trg_img, trg_lbl)
                 psnr = 10 * math.log10(1 / mse_loss.item())
+                npsnr = 10 * math.log10(1 / nmse_loss.item())
                 valid_psnr += psnr
-            print("%s %.2fs => Epoch[%d/%d](%d/%d): \nloss_src_M : %.5f loss_trg_m : %.5f loss_trg_D_fake : %.5f loss_src_D : %.5f loss_trg_D_real : %.5f"%(
+            print("%s %.2fs => Epoch[%d/%d](%d/%d): loss_src_M : %.5f loss_trg_m : %.5f loss_trg_D_fake : %.5f loss_src_D : %.5f loss_trg_D_real : %.5f"%(
                 'Validation', time.time()-start_valid, epoch, opt.n_epochs, iteration_v, len(src_v_loader), loss_src_M, loss_trg_m, loss_trg_D_fake, loss_src_D, loss_trg_D_real))
-            print("piglet PSNR : %.5f piglet avg_PSNR : %.5f avg_LOSS : %.5f avg_LOSS_D : %.5f"%(psnr, valid_psnr/iteration_v, valid_loss/iteration_v, valid_loss_D/iteration_v))
+            print("noise PSNR : %.5f PSNR : %.5f "%(npsnr, psnr))
         
 
         train_psnr = train_psnr/iteration_t

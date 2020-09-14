@@ -7,7 +7,7 @@ import numpy as np
 Tensor = torch.cuda.FloatTensor 
 
 def compute_gradient_penalty(D, real_samples, fake_samples):
-    print(real_samples.shape, fake_samples.shape)
+    # print(real_samples.shape, fake_samples.shape)
     """Calculates the gradient penalty loss for WGAN GP"""
     # Random weight term for interpolation between real and fake samples
     alpha = Tensor(np.random.random((real_samples.size(0), 1, 1, 1))).cuda()

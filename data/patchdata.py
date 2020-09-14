@@ -15,7 +15,7 @@ import torch
 import torch.utils.data as data
 
 class PatchData(data.Dataset):
-    def __init__(self, args, name='', mode='train', benchmark=False):
+    def __init__(self, args, name='', mode='train', domain=None, benchmark=False):
         self.args = args
         self.dataset = name
         self.in_mem = args.in_mem
@@ -26,6 +26,7 @@ class PatchData(data.Dataset):
         self.benchmark = benchmark
 
         self.body_part = args.body_part
+        self.domain = domain
 
         # self.add_noise = args.add_noise
         # self.noise = args.noise

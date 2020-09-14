@@ -10,11 +10,12 @@ from data.patchdata import PatchData
 from data import common
 
 class LPMAYO(PatchData):
-    def __init__(self, args, name='lp-mayo', mode='train', benchmark=False):
+    def __init__(self, args, name='lp-mayo', mode='train', domain='None', benchmark=False):
         super(LPMAYO, self).__init__(
-            args, name=name, mode=mode, benchmark=benchmark
+            args, name=name, mode=mode, domain=domain, benchmark=benchmark
         )
         # LPMAYO specific
+
         
 
     def _scan(self):
@@ -45,9 +46,18 @@ class LPMAYO(PatchData):
     def _set_filesystem(self, data_dir):
         super(LPMAYO, self)._set_filesystem(data_dir)
 
-        self.dir_hr = os.path.join(self.apath, 'full')
-        self.dir_lr = os.path.join(self.apath, 'low')
+        if self.domain == 'ref2trg':
+            self.dir_hr = os.path.join(self.apath, 'fake_full')
+            self.dir_lr = os.path.join(self.apath, 'fake_low')
+        elif self.domain == 'out2src':
+            self.dir_hr = os.path.join(self.apath, 'full')
+            self.dir_lr = os.path.join(self.apath, 'fake_low')
+        else : #self.domain = 'None'
+            self.dir_hr = os.path.join(self.apath, 'full')
+            self.dir_lr = os.path.join(self.apath, 'low')
         self.ext = ('.tiff', '.tiff')
+
+        print('[**] Set File System : \ndir_hr {} \ndir_lr {}'.format(self.dir_hr, self.dir_lr))
 
 
 

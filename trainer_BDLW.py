@@ -106,11 +106,12 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
             # M with source Denoising
             src_out = net(src_img, src_lbl)
-            loss_src_M = net.loss*0.5
+            loss_src_M = net.loss
 
             if opt.ssim_loss == True:
+                loss_src_M = loss_src_M *0.5
                 ssimloss = ssim_loss.SSIM(window_size = 11)
-                loss_src_M -= ssimloss(src_out, src_lbl)*0.5 
+                loss_src_M += (1-ssimloss(src_out, src_lbl)) 
             
             # M with target Denoising
             trg_out = net(trg_img, trg_lbl)
@@ -154,9 +155,9 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             psnr = 10* math.log10(1 / mse_loss.item())
             train_psnr += psnr
 
-            print("%s %.2fs => Epoch[%d/%d](%d/%d): \nloss_src_M : %.5f loss_trg_D : %.5f"%(
-                'Training', time.time()-start_train, epoch, opt.n_epochs, iteration_t, len(src_t_loader), loss_src_M, loss_trg_D))
-            print("PSNR : %.5f avg_PSNR : %.5f avg_LOSS : %.5f avg_LOSS_D : %.5f"%(psnr, train_psnr/iteration_t, train_loss/iteration_t, train_loss_D/iteration_t))
+            print("%s %.2fs => Epoch[%d/%d](%d/%d): loss_src_M : %.5f loss_trg_D : %.5f PSNR : %.5f"%(
+                'Training', time.time()-start_train, epoch, opt.n_epochs, iteration_t, len(src_t_loader), loss_src_M, loss_trg_D, psnr))
+            # print("PSNR : %.5f avg_PSNR : %.5f avg_LOSS : %.5f avg_LOSS_D : %.5f"%(psnr, train_psnr/iteration_t, train_loss/iteration_t, train_loss_D/iteration_t))
         
 
         valid_psnr = 0.0

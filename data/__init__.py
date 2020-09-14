@@ -21,22 +21,20 @@ def get_module_attr(dataset):
     if dataset == 'mayo':
         module_name = 'mayo'
         attr = 'Mayo'
-    elif dataset == 'lp-mayo':
+    elif 'lp-mayo' in dataset:
         module_name = 'lp-mayo'
         attr = 'LPMAYO'
-    elif dataset == 'piglet':
+    elif 'piglet' in dataset:
         module_name = 'piglet'
         attr = 'PIGLET'
-    elif dataset == 'fake-lp-mayo':
-        module_name = 'fake-lp-mayo'
-        attr = 'FakeLPMAYO'
+
     print("{} module_name: {}".format(__file__, module_name))
     print("attr:", attr)
     return module_name, attr
 
 
 
-def get_train_valid_dataloader(args, train_datasets=None):
+def get_train_valid_dataloader(args, train_datasets=None, domain=None):
     datasets = []
     if train_datasets == None:
         train_datasets = args.train_datasets
@@ -48,8 +46,7 @@ def get_train_valid_dataloader(args, train_datasets=None):
         # module_name = d
         module_name, attr = get_module_attr(d)
         m = import_module('data.' + module_name.lower())
-
-        datasets.append(getattr(m, attr)(args))
+        datasets.append(getattr(m, attr)(args, domain=domain))
 
     # module_name, attr = get_module_attr(args.dataset)
     # m = import_module('data.' + module_name.lower())

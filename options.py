@@ -48,11 +48,13 @@ parser.add_argument("--train_ratio", type=float, default=0.95,
 parser.add_argument('--ext', type=str, default='sep', choices=['sep', 'img'],
                     help='File extensions')
 parser.add_argument('--source', type=str, default='lp-mayo', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo'], 
-                    help='Specify dataset name (both in train & test)')
-parser.add_argument('--target', type=str, default='piglet', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo'])
+                    help='Specify dataset name for source dataset (not for base)')
+parser.add_argument('--target', type=str, default='piglet', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo'],
+                    help='Specify dataset name for target dataset (not for base)')
+parser.add_argument('--sync_domain', type=str, default=None, choices=[None, 'ref2trg', 'out2src'])
 parser.add_argument('--train_datasets', nargs='+', default=None,
-                    choices=['mayo','lp-mayo','pig'],
-                    help='Specify dataset name (mayo or genoray)')
+                    choices=['mayo','lp-mayo','piglet', 'fake-lp-mayo'],
+                    help='Specify dataset name for base, default=source')
 
 parser.add_argument('--data_dir', type=str, default=data_dir,
                     help='Path of training directory contains both lr and hr images')
@@ -146,7 +148,7 @@ parser.add_argument('--wgan_loss', default=False, action='store_true',
                     help='include wgan_loss to generator or not')
 
 #self-supervised
-parser.add_argument('--noise', default=True, action='store_true',
+parser.add_argument('--noise', default=False, action='store_true',
                     help='include noise')
 parser.add_argument('--noise_typ', type=str, default='gauss', choices=['s&p','poisson','speckle'])
 

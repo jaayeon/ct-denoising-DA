@@ -1,7 +1,6 @@
 
 import numpy as np
 import os
-import cv2
 
 def make_noise(image, noise_typ = 'gauss'):
       if noise_typ == "gauss":
