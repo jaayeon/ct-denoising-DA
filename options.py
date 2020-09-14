@@ -17,7 +17,7 @@ parser.add_argument('--model_d', type=str, default='wgan', choices=['discriminat
 parser.add_argument('--way', type=str, default='wadv', choices=['base', 'adv', 'wadv', 'self'])
 parser.add_argument('--ssim_loss', default=False, action='store_true',
                     help='Use ssim loss')
-parser.add_argument('--auto', default=True, action='store_true',
+parser.add_argument('--auto', default=False, action='store_true',
                     help='self-supervised learning')
 
 

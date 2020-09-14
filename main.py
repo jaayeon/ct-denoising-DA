@@ -29,8 +29,8 @@ if __name__ == '__main__':
 
 
         elif opt.way == 'wadv':
-            train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
-            train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target)
+            train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source, domain=opt.sync_domain)
+            train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target, domain=None)
             BTW.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
 
         elif opt.way == 'self':

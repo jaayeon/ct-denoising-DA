@@ -11,11 +11,7 @@ from utils.helper import set_checkpoint_dir, set_gpu
 from utils.saver import load_model, save_checkpoint, save_config
 from models import set_model
 from models.losses import ssim_loss
-<<<<<<< HEAD
 from models import  make_noise
-=======
-from models import make_noisy
->>>>>>> jeeylee
 
 
 def run_train(opt, self_t_loader, self_v_loader):

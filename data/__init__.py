@@ -40,13 +40,12 @@ def get_train_valid_dataloader(args, train_datasets=None, domain=None):
         train_datasets = args.train_datasets
     else : 
         train_datasets = [train_datasets]
-    
     print("Train datasets: ", train_datasets)
     for d in train_datasets:
         # module_name = d
         module_name, attr = get_module_attr(d)
         m = import_module('data.' + module_name.lower())
-        datasets.append(getattr(m, attr)(args, domain=domain))
+        datasets.append(getattr(m, attr)(args, domain= domain))
 
     # module_name, attr = get_module_attr(args.dataset)
     # m = import_module('data.' + module_name.lower())
