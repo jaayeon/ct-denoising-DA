@@ -11,9 +11,7 @@ def set_model(opt):
     elif opt.model == 'edsr':
         module_name = 'models.edsr'
     elif opt.model == 'unet_c':
-        module_name = 'models.unet_c'  
-    elif opt.model == 'auto':
-        module_name = 'models.autoencoder'  
+        module_name = 'models.unet_c'    
     else:
         raise ValueError("Need to specify model (redcnn, dncnn)")
     

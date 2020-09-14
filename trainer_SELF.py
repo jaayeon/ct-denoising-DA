@@ -11,7 +11,11 @@ from utils.helper import set_checkpoint_dir, set_gpu
 from utils.saver import load_model, save_checkpoint, save_config
 from models import set_model
 from models.losses import ssim_loss
+<<<<<<< HEAD
 from models import  make_noise
+=======
+from models import make_noisy
+>>>>>>> jeeylee
 
 
 def run_train(opt, self_t_loader, self_v_loader):
@@ -42,9 +46,6 @@ def run_train(opt, self_t_loader, self_v_loader):
         net = nn.DataParallel(net)
 
     scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5, mode='min')
-
-    # Setting loss function
-    loss = nn.MSELoss()
     
     if opt.start_epoch == 1:
         with open(log_file, mode='w') as f:
@@ -76,10 +77,12 @@ def run_train(opt, self_t_loader, self_v_loader):
         start_train = time.time()
         print("***Training***")
         for iteration_t, img in enumerate(self_t_loader, 1):
-            self_lbl, self_real = img
-            
+            self_lbl,self_real, num = img
+            #print(self_lbl.shape)
+            #print(self_real.shape)
             if opt.noise == True:
-                self_img = make_noise(self_img, noise_typ = opt.noise_typ)
+                self_img = make_noisy.make_noisy(self_lbl)
+                #self_img = make_noise(self_img, noise_typ = opt.noise_typ)
 
 
             if opt.use_cuda:
@@ -89,9 +92,9 @@ def run_train(opt, self_t_loader, self_v_loader):
             net.train()
             optimizer.zero_grad()
         
-            self_out = net(self_img)
+            self_out = net(self_img,self_lbl)
         
-            train_loss = loss(self_out,self_img)
+            train_loss = net.loss
             train_loss.backward()
             optimizer.step()
 
@@ -112,10 +115,11 @@ def run_train(opt, self_t_loader, self_v_loader):
         print("***Validation***")
 
         for iteration_v, img in enumerate(self_v_loader, 1):
-            self_lbl, self_real = img
+            self_lbl,self_real, num = img
             
             if opt.noise == True:
-                self_img = make_noise(self_img, noise_typ = opt.noise_typ)
+                self_img = make_noisy.make_noisy(self_lbl)
+                #self_img = make_noise(self_img, noise_typ = opt.noise_typ)
 
             
             if opt.use_cuda:
@@ -124,8 +128,8 @@ def run_train(opt, self_t_loader, self_v_loader):
             with torch.no_grad():
                 net.eval()
 
-                self_out = net(self_img)
-                self_val_loss = loss(self_out,self_img)
+                self_out = net(self_img,self_lbl)
+                self_val_loss = net.loss
 
 
                 valid_loss += self_val_loss
