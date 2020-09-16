@@ -27,6 +27,9 @@ def get_module_attr(dataset):
     elif 'piglet' in dataset:
         module_name = 'piglet'
         attr = 'PIGLET'
+    elif 'phantom' in dataset:
+        module_name = 'phantom'
+        attr = 'PHANTOM' 
 
     print("{} module_name: {}".format(__file__, module_name))
     print("attr:", attr)

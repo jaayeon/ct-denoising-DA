@@ -26,6 +26,7 @@ class PatchData(data.Dataset):
         self.benchmark = benchmark
 
         self.body_part = args.body_part
+        self.anatomy = args.anatomy
         self.domain = domain
 
         # self.add_noise = args.add_noise

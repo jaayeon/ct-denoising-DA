@@ -47,13 +47,13 @@ parser.add_argument("--train_ratio", type=float, default=0.95,
 
 parser.add_argument('--ext', type=str, default='sep', choices=['sep', 'img'],
                     help='File extensions')
-parser.add_argument('--source', type=str, default='lp-mayo', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo'], 
+parser.add_argument('--source', type=str, default='lp-mayo', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'phantom'], 
                     help='Specify dataset name for source dataset (not for base)')
-parser.add_argument('--target', type=str, default='piglet', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo'],
+parser.add_argument('--target', type=str, default='piglet', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'phantom'],
                     help='Specify dataset name for target dataset (not for base)')
 parser.add_argument('--sync_domain', type=str, default=None, choices=[None, 'ref2trg', 'out2src'])
 parser.add_argument('--train_datasets', nargs='+', default=None,
-                    choices=['mayo','lp-mayo','piglet', 'fake-lp-mayo'],
+                    choices=['mayo','lp-mayo','piglet', 'fake-lp-mayo', 'phantom'],
                     help='Specify dataset name for base, default=source')
 
 parser.add_argument('--data_dir', type=str, default=data_dir,
@@ -92,6 +92,10 @@ parser.add_argument('--thickness', type=int, default=3,
 #lp-mayo dataset specifications
 parser.add_argument('--body_part', '-bp',type=str, nargs='+', choices=['C', 'L', 'N'], default='L',
                     help='choose body part in ldct-projection-mayo')
+
+#phantom dataset specifications
+parser.add_argument('--anatomy', type=str, nargs='+', choices=['chest', 'hn', 'pelvis'], default='chest',
+                    help='choose anatomy in phantom dataset')
 
 #edsr
 parser.add_argument('--res_scale', type=float, default=1,
@@ -166,6 +170,8 @@ elif args.source == 'mayo':
 elif args.source == 'piglet':
     args.gt_img_dir = r'../../data/denoising/test/piglet/full'
     args.img_dir = r'../../data/denoising/test/piglet/Oten'
+# elif args.source == 'phantom':
+#     args.gt_img_dir = r'../../data/denoising/test/'
 elif args.target == 'fake-lp-mayo':
     args.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
     args.img_dir = r'../../data/denoising/test/fake_low'
