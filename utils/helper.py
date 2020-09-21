@@ -36,11 +36,7 @@ def set_checkpoint_dir(opt):
     for d in opt.train_datasets:
         dataset_name = dataset_name + d
     model_opt = dataset_name  + "-" + date + "-" + opt.model
-    
-    if opt.way == 'base':
-        pass
-    else : 
-        model_D_opt = dataset_name + '-' + date + '-' + 'D'
+    model_D_opt = dataset_name + '-' + date + '-' + 'D'
     
     if opt.source == 'lp-mayo':
         model_opt = model_opt + '-'
@@ -48,15 +44,12 @@ def set_checkpoint_dir(opt):
         for bp in opt.body_part:
             model_opt = model_opt + bp
             model_D_opt = model_D_opt + bp
-    elif opt.source == 'phantom':
+    elif opt.source == 'phantom_s':
         model_opt = model_opt + '-' + opt.anatomy
+        model_D_opt = model_D_opt + '-' + opt.anatomy
     
     opt.checkpoint_dir = os.path.join(opt.checkpoint_dir, model_opt)
-    
-    if opt.way == 'base':
-        pass
-    else :
-        opt.checkpoint_dir_D = os.path.join(opt.checkpoint_dir_D, model_D_opt)
+    opt.checkpoint_dir_D = os.path.join(opt.checkpoint_dir_D, model_D_opt)
 
 def set_test_dir(opt):
     model_opt = os.path.basename(opt.checkpoint_dir)

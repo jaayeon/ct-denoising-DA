@@ -11,11 +11,12 @@ from data import common
 
 class LPMAYO(PatchData):
     def __init__(self, args, name='lp-mayo', mode='train', domain=None, benchmark=False):
+        self.body_part = args.body_part
         super(LPMAYO, self).__init__(
             args, name=name, mode=mode, domain=domain, benchmark=benchmark
         )
         # LPMAYO specific
-
+        
         
 
     def _scan(self):

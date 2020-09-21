@@ -27,9 +27,12 @@ def get_module_attr(dataset):
     elif 'piglet' in dataset:
         module_name = 'piglet'
         attr = 'PIGLET'
-    elif 'phantom' in dataset:
-        module_name = 'phantom'
-        attr = 'PHANTOM' 
+    elif 'phantom_s' in dataset:
+        module_name = 'phantom_s'
+        attr = 'PHANTOM_S'
+    elif 'phantom_t' in dataset:
+        module_name = 'phantom_t'
+        attr = 'PHANTOM_T'     
 
     print("{} module_name: {}".format(__file__, module_name))
     print("attr:", attr)
@@ -81,10 +84,10 @@ def get_train_valid_dataloader(args, train_datasets=None, domain=None):
 
 
 def get_test_img_list(opt):
-    img_list = glob.glob(os.path.join(opt.img_dir, '*', '*'))
+    img_list = glob.glob(os.path.join(opt.img_dir, '**'))
     # print(img_list)
     print(opt.gt_img_dir)
-    gt_img_list = glob.glob(os.path.join(opt.gt_img_dir, '*', '*'))
+    gt_img_list = glob.glob(os.path.join(opt.gt_img_dir, '**'))
     # print(gt_img_list)
-    print('test img low path : {}\n test img high path : {}'.format(opt.img_dir, opt.gt_img_dir))
+    print('test img low path : {}\ntest img high path : {}'.format(opt.img_dir, opt.gt_img_dir))
     return img_list, gt_img_list

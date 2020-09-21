@@ -19,6 +19,8 @@ def load_config(opt):
     test_patches = opt.test_patches
     patch_offset = opt.patch_offset
     target = opt.target
+    mA_full = opt.mA_full
+    mA_low = opt.mA_low
 
     checkpoint_dir = select_checkpoint_dir(opt)
     
@@ -47,7 +49,9 @@ def load_config(opt):
     elif opt.target == 'piglet':
         opt.gt_img_dir = r'../../data/denoising/test/piglet/full'
         opt.img_dir = r'../../data/denoising/test/piglet/Oten'
-
+    elif opt.target == 'phantom_t':
+        opt.gt_img_dir = r'../../data/denoising/test/phantom/{}/{}/{}'.format(opt.target_vendor, opt.anatomy, mA_full)
+        opt.img_dir = r'../../data/denoising/test/phantom/{}/{}/{}'.format(opt.target_vendor, opt.anatomy, mA_low)
     return opt
 
 
