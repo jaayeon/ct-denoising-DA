@@ -166,9 +166,11 @@ elif args.source == 'mayo':
 elif args.source == 'piglet':
     args.gt_img_dir = r'../../data/denoising/test/piglet/full'
     args.img_dir = r'../../data/denoising/test/piglet/Oten'
-elif args.target == 'fake-lp-mayo':
-    args.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
-    args.img_dir = r'../../data/denoising/test/fake_low'
+
+if args.way == 'wadv':
+    args.model_d = 'wgan'
+elif args.way == 'adv':
+    args.model_d = 'discriminator'
 
 if args.train_datasets is None:
     args.train_datasets = [args.source]
