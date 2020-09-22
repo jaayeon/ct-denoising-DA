@@ -27,12 +27,15 @@ def get_module_attr(dataset):
     elif 'piglet' in dataset:
         module_name = 'piglet'
         attr = 'PIGLET'
-    elif 'phantom_s' in dataset:
-        module_name = 'phantom_s'
-        attr = 'PHANTOM_S'
-    elif 'phantom_t' in dataset:
-        module_name = 'phantom_t'
-        attr = 'PHANTOM_T'     
+    elif 'siemens' in dataset:
+        module_name = 'phantom'
+        attr = 'PHANTOM'
+    elif 'toshiba' in dataset:
+        module_name = 'phantom'
+        attr = 'PHANTOM'
+    elif 'ge' in dataset:   
+        module_name = 'phantom'
+        attr = 'PHANTOM'  
 
     print("{} module_name: {}".format(__file__, module_name))
     print("attr:", attr)
@@ -40,7 +43,7 @@ def get_module_attr(dataset):
 
 
 
-def get_train_valid_dataloader(args, train_datasets=None, domain=None):
+def get_train_valid_dataloader(args, train_datasets=None, domain_sync=None):
     datasets = []
     if train_datasets == None:
         train_datasets = args.train_datasets
@@ -51,7 +54,7 @@ def get_train_valid_dataloader(args, train_datasets=None, domain=None):
         # module_name = d
         module_name, attr = get_module_attr(d)
         m = import_module('data.' + module_name.lower())
-        datasets.append(getattr(m, attr)(args, domain= domain))
+        datasets.append(getattr(m, attr)(args, name=d, domain_sync= domain_sync))
 
     # module_name, attr = get_module_attr(args.dataset)
     # m = import_module('data.' + module_name.lower())

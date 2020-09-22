@@ -47,13 +47,13 @@ parser.add_argument("--train_ratio", type=float, default=0.95,
 
 parser.add_argument('--ext', type=str, default='sep', choices=['sep', 'img'],
                     help='File extensions')
-parser.add_argument('--source', type=str, default='lp-mayo', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'phantom_s', 'phantom_t'], 
+parser.add_argument('--source', type=str, default='lp-mayo', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'], 
                     help='Specify dataset name for source dataset (not for base)')
-parser.add_argument('--target', type=str, default='piglet', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'phantom_s', 'phantom_t'],
+parser.add_argument('--target', type=str, default='piglet', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for target dataset (not for base)')
-parser.add_argument('--sync_domain', type=str, default=None, choices=[None, 'ref2trg', 'out2src'])
+parser.add_argument('--domain_sync', type=str, default=None, choices=[None, 'ref2trg', 'out2src'])
 parser.add_argument('--train_datasets', nargs='+', default=None,
-                    choices=['mayo','lp-mayo','piglet', 'fake-lp-mayo', 'phantom_s', 'phantom_t'],
+                    choices=['mayo','lp-mayo','piglet', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for base, default=source')
 
 parser.add_argument('--data_dir', type=str, default=data_dir,
@@ -96,14 +96,10 @@ parser.add_argument('--body_part', '-bp',type=str, nargs='+', choices=['C', 'L',
 #phantom dataset specifications
 parser.add_argument('--anatomy', type=str, default='chest',
                     help='Specify anatomy of phantom dataset (chest/hn/pelvis)')
-parser.add_argument('--source_vendor', type=str, default='siemens',
-                    help='Specify vendor of phantom source dataset (siemens/toshiba/cbct)')
-parser.add_argument('--target_vendor', type=str, default='toshiba',
-                    help='Specify vendor of phantom target dataset (siemens/toshiba/cbct)')
-parser.add_argument('--mA_full', type=str, default='180',
-                    help='Specify full mA of phantom dataset')
-parser.add_argument('--mA_low', type=str, default='60',
-                    help='Specify low mA of phantom dataset')
+parser.add_argument('--mA_full', type=str, default='1l', choices = ['1l','2l','3l','4l','5l','6l'],
+                    help='Specify full mA level 1,2,3,4,5,6 of phantom dataset')
+parser.add_argument('--mA_low', type=str, default='3l', choices = ['1l','2l','3l','4l','5l','6l'],
+                    help='Specify low mA level 1,2,3,4,5,6 of phantom dataset')
 
 #edsr
 parser.add_argument('--res_scale', type=float, default=1,
@@ -169,16 +165,16 @@ parser.add_argument('--noise_typ', type=str, default='gauss', choices=['s&p','po
 
 args = parser.parse_args()
 
-if args.source == 'lp-mayo':
+if args.target == 'lp-mayo':
     args.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
     args.img_dir = r'../../data/denoising/test/lp-mayo/low'
-elif args.source == 'mayo':
+elif args.target == 'mayo':
     args.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm'.format(args.thickness)
     args.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm'.format(args.thickness)
-elif args.source == 'piglet':
+elif args.target == 'piglet':
     args.gt_img_dir = r'../../data/denoising/test/piglet/full'
     args.img_dir = r'../../data/denoising/test/piglet/Oten'
-elif args.source == 'phantom_s':
+elif args.target == 'phantom_s':
     args.gt_img_dir = r'../../data/denoising/test/phantom/{}/{}/{}'.format(args.source_vendor, args.anatomy, args.mA_full)
     args.img_dir = r'../../data/denoising/test/phantom/{}/{}/{}'.format(args.source_vendor, args.anatomy, args.mA_low)
 elif args.target == 'fake-lp-mayo':
