@@ -105,7 +105,8 @@ class FCDiscriminator(nn.Module):
 
         self.norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
-        self.bce_loss = nn.MSELoss()
+        self.mse_loss = nn.MSELoss()
+        self.bce_loss = nn.BCEWithLogitsLoss()
 
 
     def forward(self, x, lbl):
@@ -121,7 +122,7 @@ class FCDiscriminator(nn.Module):
         x = self.leaky_relu(x)
         x = self.bn4(x)
         x = self.classifier(x)
-        self.loss = self.bce_loss(x, Variable(torch.FloatTensor(x.data.size()).fill_(lbl)).cuda())
+        self.loss = self.mse_loss(x, Variable(torch.FloatTensor(x.data.size()).fill_(lbl)).cuda())
 
         return x
 
