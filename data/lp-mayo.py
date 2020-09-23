@@ -16,11 +16,8 @@ class LPMAYO(PatchData):
             args, name=name, mode=mode, domain_sync=domain_sync, benchmark=benchmark
         )
         # LPMAYO specific
-<<<<<<< HEAD
         
         
-=======
->>>>>>> jeeylee
 
     def _scan(self):
 
