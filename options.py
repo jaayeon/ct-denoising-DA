@@ -96,9 +96,9 @@ parser.add_argument('--body_part', '-bp',type=str, nargs='+', choices=['C', 'L',
 #phantom dataset specifications
 parser.add_argument('--anatomy', type=str, default='chest',
                     help='Specify anatomy of phantom dataset (chest/hn/pelvis)')
-parser.add_argument('--mA_full', type=str, default='1l', choices = ['1l','2l','3l','4l','5l','6l'],
+parser.add_argument('--mA_full', type=str, default='level1', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify full mA level 1,2,3,4,5,6 of phantom dataset')
-parser.add_argument('--mA_low', type=str, default='3l', choices = ['1l','2l','3l','4l','5l','6l'],
+parser.add_argument('--mA_low', type=str, default='level3', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify low mA level 1,2,3,4,5,6 of phantom dataset')
 
 #edsr
