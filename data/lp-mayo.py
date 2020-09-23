@@ -16,8 +16,6 @@ class LPMAYO(PatchData):
         )
         # LPMAYO specific
 
-        
-
     def _scan(self):
 
         names_hr = []
