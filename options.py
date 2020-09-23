@@ -174,12 +174,9 @@ elif args.target == 'mayo':
 elif args.target == 'piglet':
     args.gt_img_dir = r'../../data/denoising/test/piglet/full'
     args.img_dir = r'../../data/denoising/test/piglet/Oten'
-elif args.target == 'phantom_s':
-    args.gt_img_dir = r'../../data/denoising/test/phantom/{}/{}/{}'.format(args.source_vendor, args.anatomy, args.mA_full)
-    args.img_dir = r'../../data/denoising/test/phantom/{}/{}/{}'.format(args.source_vendor, args.anatomy, args.mA_low)
-elif args.target == 'fake-lp-mayo':
-    args.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
-    args.img_dir = r'../../data/denoising/test/fake_low'
+else:
+    args.gt_img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(args.target, args.anatomy, args.mA_full)
+    args.img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(args.target, args.anatomy, args.mA_low)
 
 if args.train_datasets is None:
     args.train_datasets = [args.source]
