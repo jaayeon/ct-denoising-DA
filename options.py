@@ -96,9 +96,9 @@ parser.add_argument('--body_part', '-bp',type=str, nargs='+', choices=['C', 'L',
 #phantom dataset specifications
 parser.add_argument('--anatomy', type=str, default='chest',
                     help='Specify anatomy of phantom dataset (chest/hn/pelvis)')
-parser.add_argument('--mA_full', type=str, default='1l', choices = ['1l','2l','3l','4l','5l','6l'],
+parser.add_argument('--mA_full', type=str, default='level1', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify full mA level 1,2,3,4,5,6 of phantom dataset')
-parser.add_argument('--mA_low', type=str, default='3l', choices = ['1l','2l','3l','4l','5l','6l'],
+parser.add_argument('--mA_low', type=str, default='level3', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify low mA level 1,2,3,4,5,6 of phantom dataset')
 
 #edsr
@@ -174,12 +174,9 @@ elif args.target == 'mayo':
 elif args.target == 'piglet':
     args.gt_img_dir = r'../../data/denoising/test/piglet/full'
     args.img_dir = r'../../data/denoising/test/piglet/Oten'
-elif args.target == 'phantom_s':
-    args.gt_img_dir = r'../../data/denoising/test/phantom/{}/{}/{}'.format(args.source_vendor, args.anatomy, args.mA_full)
-    args.img_dir = r'../../data/denoising/test/phantom/{}/{}/{}'.format(args.source_vendor, args.anatomy, args.mA_low)
-elif args.target == 'fake-lp-mayo':
-    args.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
-    args.img_dir = r'../../data/denoising/test/fake_low'
+else:
+    args.gt_img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(args.target, args.anatomy, args.mA_full)
+    args.img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(args.target, args.anatomy, args.mA_low)
 
 if args.train_datasets is None:
     args.train_datasets = [args.source]
