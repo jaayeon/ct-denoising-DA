@@ -87,7 +87,7 @@ parser.set_defaults(augment=True)
 
 # Mayo dataset specifications
 parser.add_argument('--thickness', type=int, default=3,
-                    help='Specify thicknesses of mayo dataset (1 or 3 mm)')
+                    help='Specify thicknesses of mayo dataset (1 or 3 mm or 0(1+3))')
 
 #lp-mayo dataset specifications
 parser.add_argument('--body_part', '-bp',type=str, nargs='+', choices=['C', 'L', 'N'], default='L',
@@ -169,8 +169,12 @@ if args.target == 'lp-mayo':
     args.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
     args.img_dir = r'../../data/denoising/test/lp-mayo/low'
 elif args.target == 'mayo':
-    args.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm'.format(args.thickness)
-    args.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm'.format(args.thickness)
+    if args.thickness == 0:
+        args.img_dir = r'../../data/denoising/test/mayo/quarter_*mm'
+        args.gt_img_dir = r'../../data/denoising/test/mayo/full_*mm'
+    else:
+        args.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm'.format(args.thickness)
+        args.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm'.format(args.thickness)
 elif args.target == 'piglet':
     args.gt_img_dir = r'../../data/denoising/test/piglet/full'
     args.img_dir = r'../../data/denoising/test/piglet/Oten'

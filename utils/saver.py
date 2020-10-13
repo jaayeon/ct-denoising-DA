@@ -44,14 +44,18 @@ def load_config(opt):
         opt.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
         opt.img_dir = r'../../data/denoising/test/lp-mayo/low'
     elif opt.target == 'mayo':
-        opt.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm'.format(opt.thickness)
-        opt.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm'.format(opt.thickness)
+        if opt.thickness == 0:
+            opt.img_dir = r'../../data/denoising/test/mayo/quarter_*mm/*'
+            opt.gt_img_dir = r'../../data/denoising/test/mayo/full_*mm/*'
+        else:
+            opt.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm/*'.format(opt.thickness)
+            opt.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm/*'.format(opt.thickness)
     elif opt.target == 'piglet':
         opt.gt_img_dir = r'../../data/denoising/test/piglet/full'
         opt.img_dir = r'../../data/denoising/test/piglet/Oten'
     else:
-        args.gt_img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(args.target, args.anatomy, args.mA_full)
-        args.img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(args.target, args.anatomy, args.mA_low)
+        opt.gt_img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(opt.target, opt.anatomy, opt.mA_full)
+        opt.img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(opt.target, opt.anatomy, opt.mA_low)
     return opt
 
 
