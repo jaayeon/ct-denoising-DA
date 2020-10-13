@@ -13,7 +13,11 @@ class Mayo(PatchData):
     def __init__(self, args, name='mayo', mode='train', domain_sync=None, benchmark=False):
         self.thickness = args.thickness
         super(Mayo, self).__init__(
+<<<<<<< HEAD
             args, name=name, mode=mode, domain_sync=None, benchmark=benchmark
+=======
+            args, name=name, mode=mode, domain_sync=domain_sync, benchmark=benchmark
+>>>>>>> yebin
         )
         # Mayo specific
         
@@ -33,9 +37,23 @@ class Mayo(PatchData):
 
         # full_dose = 'full_{}mm'.format(self.thickness)
         # quarter_dose = 'quarter_{}mm'.format(self.thickness)
-        full_dose = 'full_*mm'
-        quarter_dose = 'quarter*mm'
 
-        self.dir_hr = os.path.join(self.apath, full_dose)
-        self.dir_lr = os.path.join(self.apath, quarter_dose)
-        self.ext = ('.tiff', '.tiff')
+        if self.thickness == 0:
+            full_dose = 'full_*mm'
+            quarter_dose = 'quarter_*mm'
+            self.dir_hr = os.path.join(self.apath, full_dose)
+            self.dir_lr = os.path.join(self.apath, quarter_dose)
+            self.ext = ('.tiff', '.tiff')
+        else:
+            full_dose = 'full_{}mm'.format(self.thickness)
+            quarter_dose = 'quarter_{}mm'.format(self.thickness)
+            self.dir_hr = os.path.join(self.apath, full_dose)
+            self.dir_lr = os.path.join(self.apath, quarter_dose)
+            self.ext = ('.tiff', '.tiff')
+        
+        # full_dose = 'full_*mm'
+        # quarter_dose = 'quarter*mm'
+
+        # self.dir_hr = os.path.join(self.apath, full_dose)
+        # self.dir_lr = os.path.join(self.apath, quarter_dose)
+        # self.ext = ('.tiff', '.tiff')
