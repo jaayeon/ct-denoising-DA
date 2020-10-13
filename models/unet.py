@@ -5,8 +5,6 @@ import torch.nn.functional as F
 from models.convs import common
 #from models.convs import attention
 
-#from utils.wavelet import normalize_coeffs, unnormalize_coeffs, standarize_coeffs, unstandarize_coeffs
-
 def make_model(opt):
     return UNet(opt)
 

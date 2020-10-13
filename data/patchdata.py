@@ -31,9 +31,9 @@ class PatchData(data.Dataset):
 
         print("Set file system for dataset {}".format(self.dataset))
         self._set_filesystem(args.data_dir)
-        print("apath:", os.path.abspath(self.apath))
-        print("dir_hr:", os.path.abspath(self.dir_hr))
-        print("dir_lr:", os.path.abspath(self.dir_lr))
+        # print("apath:", os.path.abspath(self.apath))
+        # print("dir_hr:", os.path.abspath(self.dir_hr))
+        # print("dir_lr:", os.path.abspath(self.dir_lr))
 
         if args.ext.find('img') < 0:
             path_bin = os.path.join(self.apath, 'bin')

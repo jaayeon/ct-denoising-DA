@@ -56,9 +56,9 @@ def run_test(opt, img_list, gt_img_list):
     for img_idx, path in enumerate(zip(img_list,gt_img_list),1):
 
         img_path = path[0]
-        # print('img_path : ', img_path)
+        print('img_path : ', img_path)
         gt_img_path = path[1]
-        # print('gt_img_path ; ', gt_img_path)
+        print('gt_img_path ; ', gt_img_path)
         start_time = time.time()
         img_path = os.path.abspath(img_path)
         img_name = 'out_'+os.path.basename(img_path)
@@ -106,7 +106,7 @@ def run_test(opt, img_list, gt_img_list):
                     print("input_tensor[{}:{}].shape: {}".format(i, i+1, input_tensor[i:i+1].shape))
                     out_tensor[i] = forward_ensemble(input_tensor[i:i+1], net=net, device=opt.device)
             else:
-                out_tensor = net(input_tensor,out)
+                out_tensor = net(input_tensor)
             # print("out_tensor:", out_tensor.size())
 
             out_tensor = out_tensor.to(opt.device)

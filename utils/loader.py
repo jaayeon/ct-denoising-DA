@@ -32,3 +32,4 @@ def set_train_dir(opt):
     patch_opt = 'patch' + str(opt.patch_size)
     opt.train_dir = os.path.join(train_dir, patch_opt)
     print("Training directory is: {}".format(os.path.abspath(opt.train_dir)))
+    

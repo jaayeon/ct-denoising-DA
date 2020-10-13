@@ -1,29 +1,8 @@
-Command Ex 
-(use_cuda : default True, model : default edsr, body_part : default C,N,L(only for lp-mayo) | required : --dataset)
-====
-lp-mayo
-'''
->>(253)CUDA_VISIBLE_DEVICES=4,5,6,7 python main.py --batch_size 32 --dataset lp-mayo --multi_gpu --body_part C N L
+reference : 
+>>wganvgg
+https://github.com/SSinyu/WGAN_VGG/blob/master/networks.py
 
->>(253)CUDA_VISIBLE_DEVICES=0,1,2,3 python main.py --model dncnn --batch_size 64 --dataset lp-mayo --use_cuda --multi_gpu --n_epochs 200 --body_part L --test_every 200
-'''
-
-piglet & edsr
-'''
->>(253)CUDA_VISIBLE_DEVICES=0,1,2,3 python main.py –model edsr –batch_size 32 –dataset piglet  –multi_gpu 
-'''
-
-test
-'''
->>python main.py --mode test --dataset piglet --use_cuda
-'''
-
-train with cyclegan output with no adversarial loss
-'''
->>python main.py --way base cyc1 --use_pt
-'''
-
-train with cyclegan output with adversarial loss
-'''
->>python main.py --way adv cyc1 --use_pt
-'''
+1.코드별로 loss 정리
+2.discriminator 안으로 합쳐버리기 --> weight 저장 같이 하기 
+3. 필요없는 코드 지우기
+4. utils 정리 saver, loader 구분

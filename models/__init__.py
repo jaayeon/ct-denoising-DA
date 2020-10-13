@@ -12,6 +12,8 @@ def set_model(opt):
         module_name = 'models.edsr'
     elif opt.model == 'unet_c':
         module_name = 'models.unet_c'    
+    elif opt.model == 'wganvgg':
+        module_name = 'models.wganvgg'
     else:
         raise ValueError("Need to specify model (redcnn, dncnn)")
     

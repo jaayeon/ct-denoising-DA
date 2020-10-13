@@ -60,16 +60,6 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             f.write("epoch,train_loss,valid_loss,train_loss_D,valid_loss_D,train_psnr,valid_psnr\n")
         save_config(opt)
 
-    srcloader = {
-        'train': src_t_loader,
-        'valid': src_v_loader
-    }
-    trgloader = {
-        'train': trg_t_loader,
-        'valid': trg_v_loader
-    }
-    modes = ['train', 'valid']
-
     mse_criterion = nn.MSELoss()
 
     if opt.use_cuda:

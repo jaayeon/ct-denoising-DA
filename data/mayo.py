@@ -10,10 +10,10 @@ from data.patchdata import PatchData
 from data import common
 
 class Mayo(PatchData):
-    def __init__(self, args, name='mayo', mode='train', benchmark=False):
+    def __init__(self, args, name='mayo', mode='train', domain_sync=None, benchmark=False):
         self.thickness = args.thickness
         super(Mayo, self).__init__(
-            args, name=name, mode=mode, benchmark=benchmark
+            args, name=name, mode=mode, domain_sync=None, benchmark=benchmark
         )
         # Mayo specific
         

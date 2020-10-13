@@ -12,9 +12,9 @@ test_result_dir = os.path.join(data_dir, 'test_result_DA')
 parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'result'])
-parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c'])
+parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c', 'wganvgg'])
 parser.add_argument('--model_d', type=str, default='wgan', choices=['discriminator', 'wgan'])
-parser.add_argument('--way', type=str, default='wadv', choices=['base', 'adv', 'wadv', 'self'])
+parser.add_argument('--way', type=str, default='wadv', choices=['base', 'adv', 'wadv', 'self', 'wgan', 'wganadv'])
 parser.add_argument('--ssim_loss', default=False, action='store_true',
                     help='Use ssim loss')
 parser.add_argument('--auto', default=False, action='store_true',
@@ -94,11 +94,11 @@ parser.add_argument('--body_part', '-bp',type=str, nargs='+', choices=['C', 'L',
                     help='choose body part in ldct-projection-mayo')
 
 #phantom dataset specifications
-parser.add_argument('--anatomy', type=str, default='chest',
+parser.add_argument('--anatomy', type=str, nargs = '+', default='chest',
                     help='Specify anatomy of phantom dataset (chest/hn/pelvis)')
-parser.add_argument('--mA_full', type=str, default='level1', choices = ['level1','level2','level3','level4','level5','level6'],
+parser.add_argument('--mA_full', '-f', type=str, default='level1', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify full mA level 1,2,3,4,5,6 of phantom dataset')
-parser.add_argument('--mA_low', type=str, default='level3', choices = ['level1','level2','level3','level4','level5','level6'],
+parser.add_argument('--mA_low', '-l',type=str, default='level3', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify low mA level 1,2,3,4,5,6 of phantom dataset')
 
 #edsr
@@ -106,6 +106,10 @@ parser.add_argument('--res_scale', type=float, default=1,
                     help='residual scaling')
 parser.add_argument('--n_resblocks', type=int, default=16, 
                     help='# resblocks for edsr')
+
+#wganvgg
+parser.add_argument('--n_d_train', type=float, default=4,
+                    help='num of discriminator training for each generator training')
 
 parser.add_argument('--test_every', type=int, default=1000,
                     help='do test per every N batches')
@@ -142,6 +146,7 @@ parser.add_argument("--start_epoch", type=int, default=1,
 parser.add_argument('--batch_size', type=int, default=32,
                     help='Size of the batches')
 parser.add_argument('--n_epochs', type=int, default=200)
+parser.add_argument('--weight_decay', type=float, default= 0.001)
 
 
 #Unet
@@ -182,8 +187,12 @@ if args.train_datasets is None:
     args.train_datasets = [args.source]
 
 if args.way == 'adv':
-    args.model_d = 'discriminator'
+    args.model = 'discriminator'
 elif args.way == 'wadv':
     args.model_d = 'wgan'
+elif args.way == 'wgan':
+    args.model = 'wganvgg'
+elif args.model == 'wganadv':
+    args.model = 'wganvgg'
 
 torch.manual_seed(args.seed)

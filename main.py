@@ -4,6 +4,8 @@ import trainer as T
 import trainer_BDL as BT
 import trainer_BDLW as BTW
 import trainer_SELF as BTS
+import trainer_wganvgg as WVT
+import trainer_wganvgg_adv as WADVT
 import tester as TST
 import tester_lpmayo as TSTM
 
@@ -21,11 +23,18 @@ if __name__ == '__main__':
             train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target, domain_sync=None)
             BT.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
          
+         elif opt.way == 'wganadv':
+            train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source, domain_sync=opt.domain_sync)
+            train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target, domain_sync=None)
+            WADVT.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
 
         elif opt.way == 'base':
             train_data_loader, valid_data_loader = get_train_valid_dataloader(opt, domain_sync=opt.domain_sync)
-            # only_train_data_loader = get_train_dataloader(opt)
             T.run_train(opt, train_data_loader, valid_data_loader)
+
+        elif opt.way == 'wgan':
+            train_data_loader, valid_data_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
+            WVT.run_train(opt, train_data_loader, valid_data_loader)
 
 
         elif opt.way == 'wadv':
