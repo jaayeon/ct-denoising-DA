@@ -162,14 +162,18 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             # print("max(out):", torch.max(out))
             # print("min(out):", torch.min(out))
             smse_loss = mse_criterion(src_out, src_lbl)
+            nsmse_loss = mse_criterion(src_out, src_img)
             tmse_loss = mse_criterion(trg_out, trg_lbl)
+            ntmse_loss = mse_criterion(trg_out, trg_img)
             spsnr = 10 * math.log10(1 / smse_loss.item())
+            nspsnr = 10 * math.log10(1 / nsmse_loss.item())
             tpsnr = 10 * math.log10(1 / tmse_loss.item())
+            ntpsnr = 10 * math.log10(1 / ntmse_loss.item())
             valid_spsnr += spsnr
             valid_tpsnr += tpsnr
 
-            print("%s %.2fs => Epoch[%d/%d](%d/%d): gLoss: %.7f pLoss: %.7f fgLoss: %.7f dLoss: %.7f gpLoss: %.7f advLoss: %.7f domain_gpLoss: %.7f srcPSNR: %.5f trgPSNR: %.5f" %('Validation', 
-            time.time() - start_time, opt.epoch_num, opt.n_epochs, iteration_t, len(src_t_loader), valid_loss[0], valid_loss[1], valid_loss[2], valid_loss[3], valid_loss[4], valid_loss[5], valid_loss[6], spsnr, tpsnr))
+            print("%s %.2fs => Epoch[%d/%d](%d/%d): gLoss: %.7f pLoss: %.7f fgLoss: %.7f dLoss: %.7f gpLoss: %.7f advLoss: %.7f domain_gpLoss: %.7f noise_srcPSNR: %.5f srcPSNR: %.5f noise_trgPSNR: %.5f trgPSNR: %.5f" %('Validation', 
+            time.time() - start_time, opt.epoch_num, opt.n_epochs, iteration_t, len(src_t_loader), valid_loss[0], valid_loss[1], valid_loss[2], valid_loss[3], valid_loss[4], valid_loss[5], valid_loss[6], nspsnr, spsnr, ntpsnr, tpsnr))
 
 
         epoch_avg_train_loss = train_losses / iteration_t

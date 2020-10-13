@@ -23,7 +23,7 @@ if __name__ == '__main__':
             train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target, domain_sync=None)
             BT.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
          
-         elif opt.way == 'wganadv':
+        elif opt.way == 'wganadv':
             train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source, domain_sync=opt.domain_sync)
             train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target, domain_sync=None)
             WADVT.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)

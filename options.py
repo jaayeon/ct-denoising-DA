@@ -192,7 +192,7 @@ elif args.way == 'wadv':
     args.model_d = 'wgan'
 elif args.way == 'wgan':
     args.model = 'wganvgg'
-elif args.model == 'wganadv':
+elif args.way == 'wganadv':
     args.model = 'wganvgg'
 
 torch.manual_seed(args.seed)

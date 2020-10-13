@@ -172,10 +172,10 @@ class WGAN_VGG(nn.Module):
         return gradient_penalty
 
     def size_align(self, x, y):
-        if x.size() == y.size() : 
+        if x.size(0) == y.size(0) : 
             pass
-        elif x.size() > y.size():
-            x = x[len(y), :, :, :]
-        elif x.size() < y.size() : 
-            y = y[len(x), :, :, :]
+        elif x.size(0) > y.size(0):
+            x = x[y.size(0), :, :, :]
+        elif x.size(0) < y.size(0) : 
+            y = y[x.size(0), :, :, :]
         return x,y
