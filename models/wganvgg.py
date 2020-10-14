@@ -157,7 +157,7 @@ class WGAN_VGG(nn.Module):
         return loss
 
     def gp(self, y, fake, lambda_=10):
-        y, fake = self.size_align(y, fake)
+        y, fake = self.align_size(y, fake)
         assert y.size() == fake.size()
         a = torch.cuda.FloatTensor(np.random.random((y.size(0), 1, 1, 1)))
         interp = (a*y + ((1-a)*fake)).requires_grad_(True)
@@ -171,11 +171,11 @@ class WGAN_VGG(nn.Module):
         gradient_penalty = ((gradients.norm(2, dim=1) -1)**2).mean() * lambda_
         return gradient_penalty
 
-    def size_align(self, x, y):
+    def align_size(self, x, y):
         if x.size(0) == y.size(0) : 
             pass
         elif x.size(0) > y.size(0):
-            x = x[y.size(0), :, :, :]
+            x = x[0:y.size(0), :, :, :]
         elif x.size(0) < y.size(0) : 
-            y = y[x.size(0), :, :, :]
+            y = y[0:x.size(0), :, :, :]
         return x,y
