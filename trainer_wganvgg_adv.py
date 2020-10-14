@@ -186,30 +186,30 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         print("Valid LOSS avg : gLoss: %.7f pLoss: %.7f fgLoss: %.7f dLoss: %.7f gpLoss: %.7f advLoss: %.7f domain_gpLoss: %.7f srcPSNR: %.5f trgPSNR: %.5f"%(epoch_avg_valid_loss[0], 
                 epoch_avg_valid_loss[1], epoch_avg_valid_loss[2], epoch_avg_valid_loss[3], epoch_avg_valid_loss[4], epoch_avg_valid_loss[5], epoch_avg_valid_loss[6], epoch_avg_valid_spsnr, epoch_avg_valid_tpsnr))
 
-    with open(log_file, mode='a') as f:
-        f.write("%d,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f\n" % (
-            epoch,
-            epoch_avg_train_loss[0],
-            epoch_avg_train_loss[1],
-            epoch_avg_train_loss[2],
-            epoch_avg_train_loss[3],
-            epoch_avg_train_loss[4],
-            epoch_avg_train_loss[5],
-            epoch_avg_train_loss[6],
-            epoch_avg_train_psnr,
-            epoch_avg_valid_loss[0],
-            epoch_avg_valid_loss[1],
-            epoch_avg_valid_loss[2],
-            epoch_avg_valid_loss[3],
-            epoch_avg_valid_loss[4],
-            epoch_avg_valid_loss[5],
-            epoch_avg_valid_loss[6],
-            epoch_avg_valid_tpsnr,
-        ))
+        with open(log_file, mode='a') as f:
+            f.write("%d,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f\n"%(
+                epoch,
+                epoch_avg_train_loss[0],
+                epoch_avg_train_loss[1],
+                epoch_avg_train_loss[2],
+                epoch_avg_train_loss[3],
+                epoch_avg_train_loss[4],
+                epoch_avg_train_loss[5],
+                epoch_avg_train_loss[6],
+                epoch_avg_train_psnr,
+                epoch_avg_valid_loss[0],
+                epoch_avg_valid_loss[1],
+                epoch_avg_valid_loss[2],
+                epoch_avg_valid_loss[3],
+                epoch_avg_valid_loss[4],
+                epoch_avg_valid_loss[5],
+                epoch_avg_valid_loss[6],
+                epoch_avg_valid_tpsnr,
+            ))
 
-    if current_best_psnr < epoch_avg_valid_tpsnr : 
-        save_checkpoint(opt, net, optimizer_g, epoch, epoch_avg_valid_tpsnr)
-        current_best_psnr = epoch_avg_valid_tpsnr
+        if current_best_psnr < epoch_avg_valid_tpsnr : 
+            save_checkpoint(opt, net, optimizer_g, epoch, epoch_avg_valid_tpsnr)
+            current_best_psnr = epoch_avg_valid_tpsnr
 
 
     
