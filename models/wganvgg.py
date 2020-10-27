@@ -119,6 +119,7 @@ class WGAN_VGG(nn.Module):
         d_trg = self.domain_discriminator(trg_out.detach()-trg)
         adv_loss = -torch.mean(d_trg) + torch.mean(d_src)
         if gp:
+            # gp_loss = self.gp(src_out.detach(), trg_out.detach())
             gp_loss = self.gp(src_out.detach()-src, trg_out.detach()-trg)
             loss = adv_loss + gp_loss
         else : 
