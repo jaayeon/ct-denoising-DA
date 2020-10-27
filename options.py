@@ -94,7 +94,7 @@ parser.add_argument('--body_part', '-bp',type=str, nargs='+', choices=['C', 'L',
                     help='choose body part in ldct-projection-mayo')
 
 #phantom dataset specifications
-parser.add_argument('--anatomy', type=str, nargs = '+', default='chest',
+parser.add_argument('--anatomy', type=str,  default='chest',
                     help='Specify anatomy of phantom dataset (chest/hn/pelvis)')
 parser.add_argument('--mA_full', '-f', type=str, default='level1', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify full mA level 1,2,3,4,5,6 of phantom dataset')
