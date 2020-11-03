@@ -86,7 +86,7 @@ parser.set_defaults(augment=True)
 
 
 # Mayo dataset specifications
-parser.add_argument('--thickness', type=int, default=3,
+parser.add_argument('--thickness', type=int, default=0, choices=[0,1,3],
                     help='Specify thicknesses of mayo dataset (1 or 3 mm or 0(1+3))')
 
 #lp-mayo dataset specifications

@@ -12,7 +12,7 @@ from data import common
 class PIGLET(PatchData):
     def __init__(self, args, name='piglet', mode='train', domain_sync=None, benchmark=False):
         super(PIGLET, self).__init__(
-            args, name=name, mode=mode, domain_sync=domain, benchmark=benchmark
+            args, name=name, mode=mode, domain_sync=domain_sync, benchmark=benchmark
         )
         # PIGLET specific
         

@@ -13,11 +13,7 @@ class Mayo(PatchData):
     def __init__(self, args, name='mayo', mode='train', domain_sync=None, benchmark=False):
         self.thickness = args.thickness
         super(Mayo, self).__init__(
-<<<<<<< HEAD
-            args, name=name, mode=mode, domain_sync=None, benchmark=benchmark
-=======
             args, name=name, mode=mode, domain_sync=domain_sync, benchmark=benchmark
->>>>>>> yebin
         )
         # Mayo specific
         
