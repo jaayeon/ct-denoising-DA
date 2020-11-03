@@ -47,9 +47,9 @@ parser.add_argument("--train_ratio", type=float, default=0.95,
 
 parser.add_argument('--ext', type=str, default='sep', choices=['sep', 'img'],
                     help='File extensions')
-parser.add_argument('--source', type=str, default='lp-mayo', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'], 
+parser.add_argument('--source', type=str, default='siemens', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'], 
                     help='Specify dataset name for source dataset (not for base)')
-parser.add_argument('--target', type=str, default='piglet', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'],
+parser.add_argument('--target', type=str, default='mayo', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for target dataset (not for base)')
 parser.add_argument('--domain_sync', type=str, default=None, choices=[None, 'ref2trg', 'out2src'])
 parser.add_argument('--train_datasets', nargs='+', default=None,
@@ -129,7 +129,7 @@ parser.add_argument('--ensemble', default=False, action='store_true',
 parser.add_argument("--optimizer", type=str, default='adam',
                     help="Loss function (adam, sgd)")
 parser.add_argument('--loss', type=str, default='l1', choices=['l1','l2'])
-parser.add_argument('--lr', type=float, default=0.0002,
+parser.add_argument('--lr', type=float, default=0.0001,
                     help='Adam: learning rate')
 parser.add_argument('--lambda_adv_target', type=float, default=0.001, 
                     help="lambda_adv for adversarial training.")
@@ -159,6 +159,8 @@ parser.add_argument('--wgan_loss', default=False, action='store_true',
 parser.add_argument('--noise', default=False, action='store_true',
                     help='include noise')
 parser.add_argument('--noise_typ', type=str, default='gauss', choices=['s&p','poisson','speckle'])
+parser.add_argument('--filter', default=True, action='store_true',
+                    help='include filtering')
 
 
 

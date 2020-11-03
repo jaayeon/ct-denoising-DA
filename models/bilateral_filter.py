@@ -40,23 +40,23 @@ def pixel_bf(source, filtered_image, x, y, diameter, sigma_i, sigma_s):
 
 def bilateral_filter(source, filter_diameter, sigma_i, sigma_s):
     filtered_image = torch.zeros(source.shape) #c,h,w
+    #print(source.shape)
     h,w = source.shape
-    print(source.shape)
 
     start = time.time()
     i=0
     while i<h:
         j=0
         while j<w:
-            print(i,j)
+            #print(i,j)
             filtered_image = pixel_bf(source, filtered_image, i, j , filter_diameter, sigma_i, sigma_s)
             j += 1
         i += 1
-    print(time.time() - start)
+    #print(time.time() - start)
     return filtered_image
 
 
-
+''' 
 if __name__ == "__main__":
     src = imread('D:/data/denoising/train/lp-mayo/low/L004/simens_low_L004_000.tiff')
     src = np.asarray(src)
@@ -65,4 +65,4 @@ if __name__ == "__main__":
     filtered = bilateral_filter(src, 5, 4.0, 4.0)
     # filtered = filtered.clone().detach()
     filtered = filtered.numpy()
-    imsave('D:/data/denoising/train/lp-mayo/low/L004/filtered_simens_low_L004_000.tiff', filtered )
+    imsave('D:/data/denoising/train/lp-mayo/low/L004/filtered_simens_low_L004_000.tiff', filtered ) '''

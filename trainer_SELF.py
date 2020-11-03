@@ -5,14 +5,16 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+import cv2
+from PIL import Image
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
 from utils.helper import set_checkpoint_dir, set_gpu
 from utils.saver import load_model, save_checkpoint, save_config
 from models import set_model
 from models.losses import ssim_loss
-from models import  make_noise
-
+from models import  make_noisy
+from models import bilateral_filter
 
 def run_train(opt, self_t_loader, self_v_loader):
     opt= set_gpu(opt)
@@ -73,14 +75,38 @@ def run_train(opt, self_t_loader, self_v_loader):
         start_train = time.time()
         print("***Training***")
         for iteration_t, img in enumerate(self_t_loader, 1):
-            self_lbl,self_real, num = img
+            self_lbl, self_real, nonn = img
+            batch, channel, h, w = self_lbl.shape
             #print(self_lbl.shape)
             #print(self_real.shape)
+            self_filter = []
             if opt.noise == True:
                 self_img = make_noisy.make_noisy(self_lbl)
-                #self_img = make_noise(self_img, noise_typ = opt.noise_typ)
+                #self_img = make_noise(self_img, noise_typ = opt.noise_typ) '''
 
+            if opt.filter == True:
+                for i in range(batch): 
+                    torch.squeeze(self_lbl)
+                    print(self_lbl.shape)
+                    self_img = self_lbl[i,:,:]
+                    self_img = self_img.numpy()
+                    #print(type(self_img))
+                    #self_lbl = cv2.imread(self_lbl)
+                    img = Image.fromarray(self_img)
+                    self_lbl = cv2.bilateralFilter(img,9,75,75)
+                    self_filter.append(self_lbl)
+                    self_filter = np.array(self_filter)
+                    #print(self_filter.shape)
+                    #print(type(self_filter))
+                    #cv2.imwrite(test_result_path+'Result_'+test_noise_list[j-1],results)
+                    #cv2.imwrite('filter_'+str(i)+'.tiff',self_filter)
+    
+                self_filter = torch.tensor(self_filter)
+                self_filter = torch.unsqueeze(self_filter,1)
+                self_lbl = self_filter
+                #print(self_filter.shape)
 
+  
             if opt.use_cuda:
                 self_img, self_lbl = self_img.to(opt.device), self_lbl.to(opt.device)
 
@@ -117,7 +143,11 @@ def run_train(opt, self_t_loader, self_v_loader):
                 self_img = make_noisy.make_noisy(self_lbl)
                 #self_img = make_noise(self_img, noise_typ = opt.noise_typ)
 
-            
+
+            if opt.filter == True:
+                self_img = self_lbl
+                self_lbl = bilateral_filter.bilateral_filter(self_img, 5, 4.0, 4.0)
+
             if opt.use_cuda:
                 self_img, self_lbl = self_img.to(opt.device), self_lbl.to(opt.device)
 
