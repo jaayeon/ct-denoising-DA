@@ -35,21 +35,16 @@ def set_checkpoint_dir(opt):
     dataset_name = ''
     for d in opt.train_datasets:
         dataset_name = dataset_name + d
-    model_opt = dataset_name  + "-" + date + "-" + opt.model
-    model_D_opt = dataset_name + '-' + date + '-' + 'D'
+    model_opt = dataset_name  + "-" + date + "-" + opt.way + '-' + opt.model
     
     if opt.source == 'lp-mayo':
         model_opt = model_opt + '-'
-        model_D_opt = model_D_opt + '-'
         for bp in opt.body_part:
             model_opt = model_opt + bp
-            model_D_opt = model_D_opt + bp
-    elif opt.source == 'phantom_s':
-        model_opt = model_opt + '-' + opt.anatomy
-        model_D_opt = model_D_opt + '-' + opt.anatomy
+    elif opt.source in ['siemens', 'ge', 'toshiba']:
+        model_opt = model_opt + '-{}'.format(opt.anatomy)
     
     opt.checkpoint_dir = os.path.join(opt.checkpoint_dir, model_opt)
-    opt.checkpoint_dir_D = os.path.join(opt.checkpoint_dir_D, model_D_opt)
 
 def set_test_dir(opt):
     model_opt = os.path.basename(opt.checkpoint_dir)
@@ -60,6 +55,10 @@ def set_test_dir(opt):
     #     test_dir_opt = model_opt + "-image"
 
     test_dir_opt = model_opt + '-testset-{}'.format(opt.target)
+    if opt.target == 'mayo':
+        test_dir_opt = test_dir_opt + '-{}mm'.format(opt.thickness)
+    elif opt.target in ['siemens', 'ge', 'toshiba']:
+        test_dir_opt = test_dir_opt + '-{}'.format(opt.anatomy)
 
     if opt.ensemble:
         test_dir_opt = test_dir_opt + "-ensemble"
