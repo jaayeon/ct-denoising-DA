@@ -59,7 +59,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     # Create log file when training start
     if opt.start_epoch == 1:
         with open(log_file, mode='w') as f:
-            f.write("epoch, gloss_t, ploss_t, fgloss_t, dloss_t, gploss_t, advloss_t, dmgploss_t, psnr_t, gloss_v, ploss_v, fgloss_v, dloss_v, gploss_v, advloss_v, dmgploss_v, psnr_v\n")
+            f.write("epoch, gloss_t, pxloss_t, ploss_t, fgloss_t, dloss_t, gploss_t, advloss_t, dmgploss_t, psnr_t, gloss_v, pxloss_v, ploss_v, fgloss_v, dloss_v, gploss_v, advloss_v, dmgploss_v, psnr_v\n")
         save_config(opt)
 
     mse_criterion = nn.MSELoss()
@@ -80,8 +80,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         for param_group in optimizer_dmd.param_groups:
             print("optim_dmd lr : ", param_group['lr'])
 
-        train_losses = np.array([0.0,0.0,0.0,0.0,0.0,0.0,0.0])
-        valid_losses = np.array([0.0,0.0,0.0,0.0,0.0,0.0,0.0])
+        train_losses = np.array([0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0])
+        valid_losses = np.array([0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0])
         train_psnr = 0.0
         valid_spsnr = 0.0
         valid_tpsnr = 0.0
@@ -116,13 +116,13 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             #generator, perceptual loss
             optimizer_g.zero_grad()
             net.generator.zero_grad()
-            g_loss, p_loss, fg_loss = net.g_loss(src_img, src_lbl, perceptual=True, return_p=True, adv=True)
+            g_loss, px_loss, p_loss, fg_loss = net.g_loss(src_img, src_lbl, perceptual=True, return_p=True, pixel_wise=True, adv=True)
             g_loss.backward()
             optimizer_g.step()
 
             out = net.fake
             #gloss, ploss, fgloss, dloss, gploss, advloss, domain_gploss
-            train_loss = [g_loss.item()-0.1*p_loss.item()-0.001*fg_loss.item(), p_loss.item(), fg_loss.item(), d_loss.item()-gp_loss.item(), gp_loss.item(), adv_loss.item()-dmgp_loss.item(), dmgp_loss.item()]
+            train_loss = [g_loss.item()-px_loss.item()-p_loss.item()-fg_loss.item(), px_loss.item(), p_loss.item(), fg_loss.item(), d_loss.item()-gp_loss.item(), gp_loss.item(), adv_loss.item()-dmgp_loss.item(), dmgp_loss.item()]
             train_losses += train_loss
 
             # print("max(out):", torch.max(out))
@@ -131,8 +131,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             psnr = 10 * math.log10(1 / mse_loss.item())
             train_psnr += psnr
 
-            print("%s %.2fs => Epoch[%d/%d](%d/%d): gLoss: %.7f pLoss: %.7f fgLoss: %.7f dLoss: %.7f gpLoss: %.7f advLoss: %.7f domain_gpLoss: %.7f PSNR: %.5f" %
-                ('Training', time.time() - start_time, opt.epoch_num, opt.n_epochs, iteration_t, len(src_t_loader), train_loss[0], train_loss[1], train_loss[2], train_loss[3], train_loss[4], train_loss[5], train_loss[6], psnr))
+            print("%s %.2fs => Epoch[%d/%d](%d/%d): gLoss: %.7f pxLoss: %.7f pLoss: %.7f fgLoss: %.7f dLoss: %.7f gpLoss: %.7f advLoss: %.7f domain_gpLoss: %.7f PSNR: %.5f" %
+                ('Training', time.time() - start_time, opt.epoch_num, opt.n_epochs, iteration_t, len(src_t_loader), train_loss[0], train_loss[1], train_loss[2], train_loss[3], train_loss[4], train_loss[5], train_loss[6], train_loss[7], psnr))
 
 
         net.generator.eval()
@@ -149,14 +149,14 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
             d_loss, gp_loss = net.d_loss(src_img,src_lbl,gp=True,return_gp=True)
             adv_loss, dmgp_loss = net.adv_loss(src_img, trg_img, gp=True, return_gp=True)
-            g_loss, p_loss, fg_loss = net.g_loss(src_img,src_lbl,perceptual=True,return_p=True)
+            g_loss, px_loss, p_loss, fg_loss = net.g_loss(src_img,src_lbl,perceptual=True,return_p=True,pixel_wise=True)
 
             src_out = net.fake
             _ = net.g_loss(trg_img, trg_lbl, perceptual=False)
             trg_out = net.fake
             
             #gloss, ploss, fgloss, dloss, gploss, advloss, domain_gploss
-            valid_loss = [g_loss.item()-0.1*p_loss.item()-0.001*fg_loss.item(), p_loss.item(), fg_loss.item(), d_loss.item()-gp_loss.item(), gp_loss.item(), adv_loss.item()-dmgp_loss.item(), dmgp_loss.item()]
+            valid_loss = [g_loss.item()-px_loss.item()-p_loss.item()-fg_loss.item(), px_loss.item(), p_loss.item(), fg_loss.item(), d_loss.item()-gp_loss.item(), gp_loss.item(), adv_loss.item()-dmgp_loss.item(), dmgp_loss.item()]
             valid_losses += valid_loss
 
             # print("max(out):", torch.max(out))
@@ -172,8 +172,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             valid_spsnr += spsnr
             valid_tpsnr += tpsnr
 
-            print("%s %.2fs => Epoch[%d/%d](%d/%d): gLoss: %.7f pLoss: %.7f fgLoss: %.7f dLoss: %.7f gpLoss: %.7f advLoss: %.7f domain_gpLoss: %.7f noise_srcPSNR: %.5f srcPSNR: %.5f noise_trgPSNR: %.5f trgPSNR: %.5f" %('Validation', 
-            time.time() - start_time, opt.epoch_num, opt.n_epochs, iteration_t, len(src_t_loader), valid_loss[0], valid_loss[1], valid_loss[2], valid_loss[3], valid_loss[4], valid_loss[5], valid_loss[6], nspsnr, spsnr, ntpsnr, tpsnr))
+            print("%s %.2fs => Epoch[%d/%d](%d/%d): gLoss: %.7f pxLoss: %.7f pLoss: %.7f fgLoss: %.7f dLoss: %.7f gpLoss: %.7f advLoss: %.7f domain_gpLoss: %.7f noise_srcPSNR: %.5f srcPSNR: %.5f noise_trgPSNR: %.5f trgPSNR: %.5f" %('Validation', 
+            time.time() - start_time, opt.epoch_num, opt.n_epochs, iteration_t, len(src_t_loader), valid_loss[0], valid_loss[1], valid_loss[2], valid_loss[3], valid_loss[4], valid_loss[5], valid_loss[6], valid_loss[7], nspsnr, spsnr, ntpsnr, tpsnr))
 
 
         epoch_avg_train_loss = train_losses / iteration_t
@@ -183,11 +183,11 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         epoch_avg_valid_tpsnr = valid_tpsnr / iteration_v
 
         scheduler.step(smse_loss)
-        print("Valid LOSS avg : gLoss: %.7f pLoss: %.7f fgLoss: %.7f dLoss: %.7f gpLoss: %.7f advLoss: %.7f domain_gpLoss: %.7f srcPSNR: %.5f trgPSNR: %.5f"%(epoch_avg_valid_loss[0], 
-                epoch_avg_valid_loss[1], epoch_avg_valid_loss[2], epoch_avg_valid_loss[3], epoch_avg_valid_loss[4], epoch_avg_valid_loss[5], epoch_avg_valid_loss[6], epoch_avg_valid_spsnr, epoch_avg_valid_tpsnr))
+        print("Valid LOSS avg : gLoss: %.7f pLoss: %.7f pxLoss: %.7f fgLoss: %.7f dLoss: %.7f gpLoss: %.7f advLoss: %.7f domain_gpLoss: %.7f srcPSNR: %.5f trgPSNR: %.5f"%(epoch_avg_valid_loss[0], 
+                epoch_avg_valid_loss[1], epoch_avg_valid_loss[2], epoch_avg_valid_loss[3], epoch_avg_valid_loss[4], epoch_avg_valid_loss[5], epoch_avg_valid_loss[6], epoch_avg_valid_loss[7], epoch_avg_valid_spsnr, epoch_avg_valid_tpsnr))
 
         with open(log_file, mode='a') as f:
-            f.write("%d,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f\n"%(
+            f.write("%d,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f\n"%(
                 epoch,
                 epoch_avg_train_loss[0],
                 epoch_avg_train_loss[1],
@@ -196,6 +196,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 epoch_avg_train_loss[4],
                 epoch_avg_train_loss[5],
                 epoch_avg_train_loss[6],
+                epoch_avg_train_loss[7],
                 epoch_avg_train_psnr,
                 epoch_avg_valid_loss[0],
                 epoch_avg_valid_loss[1],
@@ -204,7 +205,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 epoch_avg_valid_loss[4],
                 epoch_avg_valid_loss[5],
                 epoch_avg_valid_loss[6],
-                epoch_avg_valid_tpsnr,
+                epoch_avg_valid_loss[7],
+                epoch_avg_valid_tpsnr
             ))
 
         if current_best_psnr < epoch_avg_valid_tpsnr : 
