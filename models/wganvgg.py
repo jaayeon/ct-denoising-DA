@@ -98,11 +98,11 @@ class WGAN_VGG(nn.Module):
         self.discriminator = WGAN_VGG_discriminator(input_size)
         self.domain_discriminator = WGAN_VGG_discriminator(input_size)
         self.feature_extractor = WGAN_VGG_FeatureExtractor()
-        self.p_criterion = nn.L1Loss()
-        self.l_criterion = nn.L1Loss()
-        self.p_weight = opt.p_weight
-        self.rev_weight = opt.rev_weight
-        self.l_weight = opt.l_weight
+        self.p_criterion = nn.L1Loss() #perceptual loss
+        self.l_criterion = nn.L1Loss() #l1 pixelwise loss
+        self.p_weight = opt.p_weight #perceptual loss weight
+        self.rev_weight = opt.rev_weight #reversal gradient loss weight
+        self.l_weight = opt.l_weight #l1 pixelwise loss weight
 
     def d_loss(self, x, y, gp=True, return_gp=False):
         self.generator.eval()

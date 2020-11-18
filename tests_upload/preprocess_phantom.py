@@ -16,7 +16,7 @@ for thck in [3,5]:
         os.makedirs(ge_crop_dir)
     for i, img_pth in enumerate(thck_paths):
         img = imageio.imread(img_pth)
-        img_name = img_pth.split('\\')[-1]
+        img_name = img_pth.split('/')[-1] # change '/' to '//' if your os is windows
         img_npy = np.array(img)
         img_crop = img_npy[60:460,60:460]
         ge_crop_path = os.path.join(ge_crop_dir, img_name)
