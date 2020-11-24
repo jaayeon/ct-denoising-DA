@@ -5,14 +5,18 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+import cv2
+from PIL import Image
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
 from utils.helper import set_checkpoint_dir, set_gpu
 from utils.saver import load_model, save_checkpoint, save_config
 from models import set_model
 from models.losses import ssim_loss
-from models import  make_noise
+from models import  make_noisy
+from models import bilateral_filter
 
+img_path = 'filtered_img/'
 
 def run_train(opt, self_t_loader, self_v_loader):
     opt= set_gpu(opt)
@@ -73,15 +77,68 @@ def run_train(opt, self_t_loader, self_v_loader):
         start_train = time.time()
         print("***Training***")
         for iteration_t, img in enumerate(self_t_loader, 1):
-            self_lbl,self_real, num = img
-            #print(self_lbl.shape)
+            self_img, self_lbl, none = img
+            batch, channel, h, w = self_img.shape
+            self_filter = []
+    
+            #print(self_img.shape)
             #print(self_real.shape)
+            #self_filter = np.empty((h,w,1))
+        
             if opt.noise == True:
                 self_img = make_noisy.make_noisy(self_lbl)
-                #self_img = make_noise(self_img, noise_typ = opt.noise_typ)
+                #self_img = make_noise(self_img, noise_typ = opt.noise_typ) 
 
+            if opt.filter == True:
+                for i in range(batch): 
+                    #print(i)
 
-            if opt.use_cuda:
+                    #print(self_lbl.shape) 
+                    self_img = torch.squeeze(self_img,1)
+                    #print(self_img.shape) #30,80,80
+                    self_img_one = self_img[i,:,:]
+                    self_img_one = self_img_one.numpy()
+
+                    #print(type(self_img))
+
+                    self_filtered_one = cv2.bilateralFilter(self_img_one,9,75,75)
+
+                    cv2.imwrite(img_path+'filtered image_'+str(iteration_t)+str(i)+'.tiff',self_filtered_one)
+                
+
+                    #print(type(self_filtered_one))
+                
+                    if i == 0:
+                        self_filter = self_filtered_one.tolist()
+                        continue
+                
+                    #self_filter = np.stack([self_filter,self_filtered_one],axis=0)
+                    #print(self_filtered.shape)
+
+                    self_filtered_one = self_filtered_one.tolist()
+
+                    #print(self_filter)
+
+                    self_filter.append(self_filtered_one)
+
+                
+                
+                    print(len(self_filter))
+                    #print(self_filter.shape)
+                    #print(type(self_filter))
+                    #cv2.imwrite('filter_'+str(i)+'.tiff',self_filter)
+                
+                self_filtered = np.array(self_filter)
+                self_filtered = torch.tensor(self_filtered)
+                #print(type(self_filtered))
+                self_filtered = torch.unsqueeze(self_filtered,1)
+                self_img = self_filtered
+
+                
+                #print(self_filter.shape)
+
+  
+            ''' if opt.use_cuda:
                 self_img, self_lbl = self_img.to(opt.device), self_lbl.to(opt.device)
 
             
@@ -94,14 +151,14 @@ def run_train(opt, self_t_loader, self_v_loader):
             train_loss.backward()
             optimizer.step()
 
-            train_loss += train_loss
-            mse_loss = mse_criterion(self_out, self_lbl)
+            train_loss += train_loss '''
+            mse_loss = mse_criterion(self_img, self_lbl)
             psnr = 10* math.log10(1 / mse_loss.item())
             train_psnr += psnr
 
-            print("%s %.2fs => Epoch[%d/%d](%d/%d): \ntrain_loss : %.5f trian_psnr : %.5f "%(
-                'Training', time.time()-start_train, epoch, opt.n_epochs, iteration_t, len(self_t_loader), train_loss, train_psnr))
-            print("PSNR : %.5f avg_PSNR : %.5f avg_LOSS : %.5f "%(psnr, train_psnr/iteration_t, train_loss/iteration_t))
+            print("%s %.2fs => Epoch[%d/%d](%d/%d): \n trian_psnr : %.5f "%(
+                'Training', time.time()-start_train, epoch, opt.n_epochs, iteration_t, len(self_t_loader),train_psnr))
+            print("PSNR : %.5f avg_PSNR : %.5f "%(psnr, train_psnr/iteration_t))
         
 
         valid_psnr = 0.0
@@ -111,31 +168,77 @@ def run_train(opt, self_t_loader, self_v_loader):
         print("***Validation***")
 
         for iteration_v, img in enumerate(self_v_loader, 1):
-            self_lbl,self_real, num = img
+            self_img,self_lbl, none = img
             
             if opt.noise == True:
                 self_img = make_noisy.make_noisy(self_lbl)
                 #self_img = make_noise(self_img, noise_typ = opt.noise_typ)
 
-            
+
+            if opt.filter == True:
+                for i in range(batch): 
+                    #print(i)
+
+                    #print(self_lbl.shape) 
+                    self_img = torch.squeeze(self_img,1)
+                    #print(self_img.shape) #30,80,80
+                    self_img_one = self_img[i,:,:]
+                    self_img_one = self_img_one.numpy()
+
+                    #print(type(self_img))
+
+                    self_filtered_one = cv2.bilateralFilter(self_img_one,9,75,75)
+
+                    cv2.imwrite(img_path+'filtered image_'+str(iteration_t)+str(i)+'.tiff',self_filtered_one)
+                
+
+                    #print(type(self_filtered_one))
+                
+                    if i == 0:
+                        self_filter = self_filtered_one.tolist()
+                        continue
+                
+                    #self_filter = np.stack([self_filter,self_filtered_one],axis=0)
+                    #print(self_filtered.shape)
+
+                    self_filtered_one = self_filtered_one.tolist()
+
+                    #print(self_filter)
+
+                    self_filter.append(self_filtered_one)
+
+                
+                
+                    #print(self_filtered.shape)
+                    #print(self_filter.shape)
+                    #print(type(self_filter))
+                    #cv2.imwrite('filter_'+str(i)+'.tiff',self_filter)
+                    
+                self_filter = np.array(self_filter)
+                self_filtered = torch.tensor(self_filter)
+                print(type(self_filtered))
+                self_filtered = torch.unsqueeze(self_filtered,1)
+                self_img = self_filtered
+
+
             if opt.use_cuda:
                 self_img, self_lbl = self_img.to(opt.device), self_lbl.to(opt.device)
 
             with torch.no_grad():
-                net.eval()
+                #net.eval()
 
-                self_out = net(self_img,self_lbl)
-                self_val_loss = net.loss
+                #self_out = net(self_img,self_lbl)
+                #self_val_loss = net.loss
 
 
-                valid_loss += self_val_loss
+                #valid_loss += self_val_loss
     
-                mse_loss = mse_criterion(self_out, self_lbl)
+                mse_loss = mse_criterion(self_img, self_lbl)
                 psnr = 10 * math.log10(1 / mse_loss.item())
                 valid_psnr += psnr
-            print("%s %.2fs => Epoch[%d/%d](%d/%d): \n valid_loss: %.5f"%(
-                'Validation', time.time()-start_valid, epoch, opt.n_epochs, iteration_v, len(self_v_loader), valid_loss))
-            print("piglet PSNR : %.5f piglet avg_PSNR : %.5f avg_LOSS : %.5f avg_LOSS_D : %.5f"%(psnr, valid_psnr/iteration_v, valid_loss/iteration_v, valid_loss_D/iteration_v))
+            print("%s %.2fs => Epoch[%d/%d](%d/%d): \n"%(
+                'Validation', time.time()-start_valid, epoch, opt.n_epochs, iteration_v, len(self_v_loader)))
+            print("Mayo PSNR : %.5f Mayo avg_PSNR : %.5f"%(psnr, valid_psnr/iteration_v))
         
 
         train_psnr = train_psnr/iteration_t

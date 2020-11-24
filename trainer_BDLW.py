@@ -22,9 +22,11 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     
     print("Setting Optimizer")
     if opt.optimizer == 'adam':
+        ''' optimizer = optim.RMSprop(net.parameters(), lr=opt.lr, alpha=0.99, eps=1e-08, weight_decay=0)
+        optimizer_D = optim.RMSprop(net_D.parameters(), lr=opt.lr, alpha=0.99, eps=1e-08, weight_decay=0) '''
         optimizer = optim.Adam(net.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=0)
         optimizer_D = optim.Adam(net_D.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=0)
-        print("===> Use Adam optimizer")
+        print("===> Use Adam optimizer") 
 
     if opt.resume:
         print("Choose Model checkpoint")
@@ -105,21 +107,29 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             optimizer_D.zero_grad()
 
             # M with source Denoising
-            src_out = net(src_img, src_lbl)
-            loss_src_M = net.loss
+            #src_out = net(src_img, src_lbl)
+            #loss_src_M = net.loss*0.5
 
             if opt.ssim_loss == True:
                 #loss_src_M = loss_src_M *0.5
                 ssimloss = ssim_loss.SSIM(window_size = 11)
                 loss_src_M += (1-ssimloss(src_out, src_lbl)) * 0.7
             
+            src_out = net(src_img, src_lbl)
+            loss_src_M = net.loss*0.5
+
+
+            
             # M with target Denoising
             trg_out = net(trg_img, trg_lbl)
+
+            #src_out = net(src_img, src_lbl)
 
             ''' for param in net_D.parameters():
                 param.requires_grad=False '''
             
             net_D.eval()
+            
 
             src_out, trg_out = src_out.detach(), trg_out.detach()
             # source domain images
@@ -127,11 +137,10 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             # target domain images
             trg_outD = net_D(trg_out,1)
 
-            if opt.wgan_loss == True:
-                if iteration_t % 10 == 0:
-                    loss_src_M += -torch.mean(src_outD)
-                    print('====================================================')
-                    print('Adding gan loss:',loss_src_M)            
+            
+            loss_src_M += torch.mean(src_outD)*0.5
+            #print('====================================================')
+            #print('Adding gan loss:',loss_src_M)            
             
             loss_src_M.backward()
             optimizer.step()
@@ -143,8 +152,9 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             net_D.train()
 
             # Gradient penalty
-            gradient_penalty = wgan_loss.compute_gradient_penalty(net_D, src_out.data, trg_out.data)
+            gradient_penalty = wgan_loss.compute_gradient_penalty(net_D, trg_out.data, src_out.data)
             # Adversarial loss
+            src_outD = net_D(src_out,0)
             loss_trg_D = torch.mean(src_outD) - torch.mean(trg_outD) + opt.lambda_gp * gradient_penalty
             loss_trg_D.backward() #update M with adversarial loss 
             optimizer_D.step()
@@ -225,8 +235,3 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             save_checkpoint(opt, net, optimizer, epoch, valid_loss)
             save_checkpoint(opt, net_D, optimizer_D, epoch, valid_loss_D, 'D')
             current_best_psnr = valid_psnr
-
-
-
-
-
