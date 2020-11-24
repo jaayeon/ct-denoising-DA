@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 from torchvision.models import vgg19
+import torchvision.transforms as transforms
 from . import unet
 
 def make_model(opt):
@@ -76,8 +77,16 @@ class WGAN_VGG_FeatureExtractor(nn.Module):
         self.feature_extractor = nn.Sequential(*list(vgg19_model.features.children())[:35]).eval()
 
     def forward(self, x):
+        x = self.normalize(x)
         out = self.feature_extractor(x)
         return out
+
+    def normalize(self, x):
+        mean=[0.485, 0.456, 0.406]
+        std=[0.229, 0.224, 0.225]
+        for i, (m,s) in enumerate(zip(mean, std)):
+            x[:,i:i+1,:,:] = (x[:,i:i+1,:,:] - m)/s
+        return x
 
 
 class WGAN_VGG(nn.Module):
@@ -89,7 +98,11 @@ class WGAN_VGG(nn.Module):
         self.discriminator = WGAN_VGG_discriminator(input_size)
         self.domain_discriminator = WGAN_VGG_discriminator(input_size)
         self.feature_extractor = WGAN_VGG_FeatureExtractor()
-        self.p_criterion = nn.L1Loss()
+        self.p_criterion = nn.L1Loss() #perceptual loss
+        self.l_criterion = nn.L1Loss() #l1 pixelwise loss
+        self.p_weight = opt.p_weight #perceptual loss weight
+        self.rev_weight = opt.rev_weight #reversal gradient loss weight
+        self.l_weight = opt.l_weight #l1 pixelwise loss weight
 
     def d_loss(self, x, y, gp=True, return_gp=False):
         self.generator.eval()
@@ -128,7 +141,7 @@ class WGAN_VGG(nn.Module):
         return (loss, gp_loss) if return_gp else loss
    
 
-    def g_loss(self, x, y, perceptual=True, return_p=False, adv=False):
+    def g_loss(self, x, y, perceptual=True, return_p=False, pixel_wise=False, adv=False):
         self.generator.train()
         self.discriminator.eval()
         self.domain_discriminator.eval()
@@ -137,17 +150,22 @@ class WGAN_VGG(nn.Module):
         d_fake = self.discriminator(self.fake) 
         g_loss = -torch.mean(d_fake) 
         if perceptual:
-            p_loss = self.p_loss(x, y)
-            loss = g_loss + (0.1 * p_loss)
+            p_loss = self.p_weight * self.p_loss(x, y)
+            loss = g_loss + p_loss
         else:
             p_loss = torch.from_numpy(np.array(0.0))
             loss = g_loss
+        if pixel_wise:
+            px_loss = self.l_weight * self.l_criterion(self.fake, y)
+            loss = loss + px_loss
+        else : 
+            px_loss = torch.from_numpy(np.array(0.0))
         if adv:
-            fg_loss = -0.001 * torch.mean(self.domain_discriminator(self.fake))
+            fg_loss = -self.rev_weight * torch.mean(self.domain_discriminator(self.fake))
             loss = loss + fg_loss
         else : 
             fg_loss = torch.from_numpy(np.array(0.0))
-        return (loss, p_loss, fg_loss) if (return_p or adv) else loss
+        return (loss, px_loss, p_loss, fg_loss) if (return_p or adv) else loss
 
     def p_loss(self, x, y):
         fake = self.generator(x).repeat(1,3,1,1)

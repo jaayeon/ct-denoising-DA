@@ -86,8 +86,8 @@ parser.set_defaults(augment=True)
 
 
 # Mayo dataset specifications
-parser.add_argument('--thickness', type=int, default=3,
-                    help='Specify thicknesses of mayo dataset (1 or 3 mm)')
+parser.add_argument('--thickness', type=int, default=0, choices=[0,1,3],
+                    help='Specify thicknesses of mayo dataset (1 or 3 mm or 0(1+3))')
 
 #lp-mayo dataset specifications
 parser.add_argument('--body_part', '-bp',type=str, nargs='+', choices=['C', 'L', 'N'], default='L',
@@ -110,6 +110,12 @@ parser.add_argument('--n_resblocks', type=int, default=16,
 #wganvgg
 parser.add_argument('--n_d_train', type=float, default=4,
                     help='num of discriminator training for each generator training')
+parser.add_argument('--p_weight', type=float, default=1, 
+                    help='perceptual loss weight (wganvgg default was 0.5)')
+parser.add_argument('--rev_weight', type=float, default=0.001,
+                    help='domain classifier reversal loss')
+parser.add_argument('--l_weight', type=float, default=1,
+                    help = 'l1 pixel wise loss in gloss')
 
 parser.add_argument('--test_every', type=int, default=1000,
                     help='do test per every N batches')
@@ -179,8 +185,12 @@ if args.target == 'lp-mayo':
     args.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
     args.img_dir = r'../../data/denoising/test/lp-mayo/low'
 elif args.target == 'mayo':
-    args.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm'.format(args.thickness)
-    args.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm'.format(args.thickness)
+    if args.thickness == 0:
+        args.img_dir = r'../../data/denoising/test/mayo/quarter_*mm'
+        args.gt_img_dir = r'../../data/denoising/test/mayo/full_*mm'
+    else:
+        args.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm'.format(args.thickness)
+        args.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm'.format(args.thickness)
 elif args.target == 'piglet':
     args.gt_img_dir = r'../../data/denoising/test/piglet/full'
     args.img_dir = r'../../data/denoising/test/piglet/Oten'
