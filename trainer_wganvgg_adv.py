@@ -31,7 +31,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     if opt.optimizer == 'adam':
         optimizer_g = optim.Adam(net.generator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=0.001)
         optimizer_d = optim.Adam(net.discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=0.001)
-        optimizer_dmd = optim.Adam(net.domain_discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
+        optimizer_dc = optim.Adam(net.domain_discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
         print("===> Use Adam optimizer_g")
     
     if opt.resume:
@@ -77,8 +77,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             print('optim_g lr : ', param_group['lr'])
         for param_group in optimizer_d.param_groups:
             print("optim_d lr : ", param_group['lr'])
-        for param_group in optimizer_dmd.param_groups:
-            print("optim_dmd lr : ", param_group['lr'])
+        for param_group in optimizer_dc.param_groups:
+            print("optim_dc lr : ", param_group['lr'])
 
         train_losses = np.array([0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0])
         valid_losses = np.array([0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0])
@@ -102,7 +102,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
             #discriminator
             optimizer_d.zero_grad()
-            optimizer_dmd.zero_grad()
+            optimizer_dc.zero_grad()
             net.discriminator.zero_grad()
             net.domain_discriminator.zero_grad()
             for _ in range(opt.n_d_train):
@@ -112,7 +112,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
                 adv_loss, dmgp_loss = net.adv_loss(src_img, trg_img, gp=True, return_gp=True)
                 adv_loss.backward()
-                optimizer_dmd.step()
+                optimizer_dc.step()
             #generator, perceptual loss
             optimizer_g.zero_grad()
             net.generator.zero_grad()
