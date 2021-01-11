@@ -14,7 +14,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     print('Initialize networks for training')
 
     net = set_model(opt)
-    net_D = set_model_D(opt)
+    net_D = net.discriminator()
+    # net_D = set_model_D(opt)
     print(net)
     print(net_D)
     

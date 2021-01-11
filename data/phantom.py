@@ -14,7 +14,7 @@ class PHANTOM(PatchData):
         self.anatomy = args.anatomy
         self.mA_full = args.mA_full
         self.mA_low = args.mA_low
-        self.reftrg_savedir = args.reftrg_savedir
+        self.fake_dir = args.fake_dir
         super(PHANTOM, self).__init__(
             args, name=name, mode=mode, domain_sync=domain_sync, benchmark=benchmark
         )
@@ -61,13 +61,13 @@ class PHANTOM(PatchData):
         self.dir_lr = []
         for at in self.anatomy: 
             self.apath = os.path.join(data_dir, self.mode, 'phantom', self.dataset)
-            if self.domain_sync == 'ref2trg': #reftrg_savedir
+            if self.domain_sync == 'ref2trg': #fake_dir
                 # self.dir_hr.append(os.path.join(self.apath, at, 'fake_{}*'.format(self.mA_full)))
                 # self.dir_lr.append(os.path.join(self.apath, at, 'fake_{}*'.format(self.mA_low)))
-                self.dir_hr.append(os.path.join(self.apath, at, 'fake_{}_{}'.format(self.mA_full, self.reftrg_savedir)))
-                self.dir_lr.append(os.path.join(self.apath, at, 'fake_{}_{}'.format(self.mA_low, self.reftrg_savedir)))
+                self.dir_hr.append(os.path.join(self.apath, at, 'fake_{}_{}'.format(self.mA_full, self.fake_dir)))
+                self.dir_lr.append(os.path.join(self.apath, at, 'fake_{}_{}'.format(self.mA_low, self.fake_dir)))
             elif self.domain_sync == 'out2src':
-                self.dir_hr.append(os.path.join(self.apath, at, '{}*'.format(self.mA_full)))
+                self.dir_hr.append(os.path.join(self.apath, at, '{}*_crop'.format(self.mA_full)))
                 self.dir_lr.append(os.path.join(self.apath, at, 'fake_{}*'.format(self.mA_low)))
             else : #self.domain_sync = 'None'
                 self.dir_hr.append(os.path.join(self.apath, at, '{}*_crop'.format(self.mA_full)))
