@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'result'])
 parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c', 'wganvgg'])
 parser.add_argument('--model_d', type=str, default='wgan', choices=['discriminator', 'wgan'])
-parser.add_argument('--way', type=str, default='wadv', choices=['base', 'adv', 'wadv', 'self', 'wgan', 'wganadv'])
+parser.add_argument('--way', type=str, default='wganrev', choices=['base', 'adv', 'wadv', 'self', 'wgan', 'wganrev'])
 parser.add_argument('--ssim_loss', default=False, action='store_true',
                     help='Use ssim loss')
 parser.add_argument('--auto', default=False, action='store_true',
@@ -47,11 +47,12 @@ parser.add_argument("--train_ratio", type=float, default=0.95,
 
 parser.add_argument('--ext', type=str, default='sep', choices=['sep', 'img'],
                     help='File extensions')
-parser.add_argument('--source', type=str, default='lp-mayo', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'], 
+parser.add_argument('--source', type=str, default='ge', choices=['lp-mayo', 'piglet', 'mayo', 'siemens', 'toshiba', 'ge'], 
                     help='Specify dataset name for source dataset (not for base)')
-parser.add_argument('--target', type=str, default='piglet', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'],
+parser.add_argument('--target', type=str, default='mayo', choices=['lp-mayo', 'piglet', 'mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for target dataset (not for base)')
 parser.add_argument('--domain_sync', type=str, default=None, choices=[None, 'ref2trg', 'out2src'])
+parser.add_argument('--reftrg_savedir', type=str, default=None, help='specify directory name(ref2trg)')
 parser.add_argument('--train_datasets', nargs='+', default=None,
                     choices=['mayo','lp-mayo','piglet', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for base, default=source')
@@ -94,11 +95,11 @@ parser.add_argument('--body_part', '-bp',type=str, nargs='+', choices=['C', 'L',
                     help='choose body part in ldct-projection-mayo')
 
 #phantom dataset specifications
-parser.add_argument('--anatomy', type=str, default='chest',
+parser.add_argument('--anatomy', type=str, default=['chest'], nargs='+',
                     help='Specify anatomy of phantom dataset (chest/hn/pelvis)')
-parser.add_argument('--mA_full', '-f', type=str, default='level1', choices = ['level1','level2','level3','level4','level5','level6'],
+parser.add_argument('--mA_full', '-f', type=str, default='level3', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify full mA level 1,2,3,4,5,6 of phantom dataset')
-parser.add_argument('--mA_low', '-l',type=str, default='level3', choices = ['level1','level2','level3','level4','level5','level6'],
+parser.add_argument('--mA_low', '-l',type=str, default='level5', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify low mA level 1,2,3,4,5,6 of phantom dataset')
 
 #edsr
@@ -202,7 +203,7 @@ elif args.way == 'wadv':
     args.model_d = 'wgan'
 elif args.way == 'wgan':
     args.model = 'wganvgg'
-elif args.way == 'wganadv':
+elif args.way == 'wganrev':
     args.model = 'wganvgg'
 
 torch.manual_seed(args.seed)
