@@ -3,19 +3,19 @@ Code
 reference code is available in https://github.com/SSinyu/WGAN_VGG/blob/master/networks.py
 ---------------
 * Training commands
-    * base : Denoising model without perceptual loss. Denoising model can be [dncnn, unet, edsr] and default model is unet
+    * base : Denoising without perceptual loss. Denoising model can be [dncnn, unet, edsr] and default model is unet
         ```
         python main.py --way base --model [dncnn, unet, edsr] --source ge 
         ```
-    * rev : Denoising model without perceptual loss. Gradient reversal of target domain is included. Denoising model can be [dncnn, unet, edsr] and default model is unet
+    * rev : Denoising without perceptual loss. Gradient reversal of target domain is included. Denoising model can be [dncnn, unet, edsr] and default model is unet
         ```
         python main.py --way rev --model [dncnn, unet, edsr] --source ge --target mayo --test_every 500
         ```
-    * wgan : Denoising model with perceptual loss. Denoising model is wganvgg.
+    * wgan : Denoising with perceptual loss. Denoising model is wganvgg.
         ```
         python main.py --way wgan --source ge --target mayo 
         ```
-    * wganrev : Denoising model with perceptual loss. Gradient reversal of target domain is included. Denoising model is wganvgg.
+    * wganrev : Denoising with perceptual loss. Gradient reversal of target domain is included. Denoising model is wganvgg.
         ```
         python main.py --way wganrev --source ge --target mayo --test_every 500
         ```
