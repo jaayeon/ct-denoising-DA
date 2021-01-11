@@ -2,7 +2,16 @@ import os,glob
 import numpy as np
 import imageio
 
-ge_pth = '../../data/denoising/train/phantom/ge/chest'
+def change_os_slash(dir_name):
+    if os.name == 'nt':  #window
+        dir_name = dir_name.split('\\')
+        out_dir_name = '/'.join(dir_name)
+    elif os.name == 'posix':  #linux
+        out_dir_name = dir_name
+
+    return out_dir_name
+
+ge_pth = '../../data/denoising/train/phantom/ge/pelvis'
 
 #before run this code,
 #you have to delete phantom images below..
@@ -16,6 +25,7 @@ for thck in [3,5]:
         os.makedirs(ge_crop_dir)
     for i, img_pth in enumerate(thck_paths):
         img = imageio.imread(img_pth)
+        img_pth = change_os_slash(img_pth)
         img_name = img_pth.split('/')[-1] # change '/' to '//' if your os is windows
         img_npy = np.array(img)
         img_crop = img_npy[60:460,60:460]

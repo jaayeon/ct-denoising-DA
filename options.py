@@ -11,15 +11,9 @@ test_result_dir = os.path.join(data_dir, 'test_result_DA')
 
 parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
-parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'result'])
-parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'unet_c', 'wganvgg'])
-parser.add_argument('--model_d', type=str, default='wgan', choices=['discriminator', 'wgan'])
-parser.add_argument('--way', type=str, default='wadv', choices=['base', 'adv', 'wadv', 'self', 'wgan', 'wganadv'])
-parser.add_argument('--ssim_loss', default=False, action='store_true',
-                    help='Use ssim loss')
-parser.add_argument('--auto', default=False, action='store_true',
-                    help='self-supervised learning')
-
+parser.add_argument('--mode', type=str, default='train', choices=['train', 'test'])
+parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'wganvgg', 'wganvgg_rev'])
+parser.add_argument('--way', type=str, default='wganrev', choices=['base', 'rev', 'wgan', 'wganrev'])
 
 
 parser.add_argument('--multi_gpu', default=False, action='store_true',
@@ -47,11 +41,17 @@ parser.add_argument("--train_ratio", type=float, default=0.95,
 
 parser.add_argument('--ext', type=str, default='sep', choices=['sep', 'img'],
                     help='File extensions')
-parser.add_argument('--source', type=str, default='siemens', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'], 
+parser.add_argument('--in_mem', default=False, action='store_true',
+                    help="Load whole data into memory, Default: False")
+parser.add_argument('--use_pt', default=False, action='store_true',
+                    help='use pt data, do not check img files')
+
+parser.add_argument('--source', type=str, default='ge', choices=['lp-mayo', 'piglet', 'mayo', 'siemens', 'toshiba', 'ge'], 
                     help='Specify dataset name for source dataset (not for base)')
-parser.add_argument('--target', type=str, default='mayo', choices=['lp-mayo', 'piglet', 'mayo', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'],
+parser.add_argument('--target', type=str, default='mayo', choices=['lp-mayo', 'piglet', 'mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for target dataset (not for base)')
 parser.add_argument('--domain_sync', type=str, default=None, choices=[None, 'ref2trg', 'out2src'])
+parser.add_argument('--fake_dir', type=str, default=None, help='specify the fake source directory base name(domain_sync : ref2trg, out2src)')
 parser.add_argument('--train_datasets', nargs='+', default=None,
                     choices=['mayo','lp-mayo','piglet', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for base, default=source')
@@ -64,10 +64,6 @@ parser.add_argument('--test_dir', type=str, default=test_dir,
                     help='Path of directory to be tested (no ground truth)')
 parser.add_argument('--test_result_dir', type=str, default=test_result_dir,
                     help='test result dir')
-parser.add_argument('--in_mem', default=False, action='store_true',
-                    help="Load whole data into memory, Default: False")
-parser.add_argument('--use_pt', default=False, action='store_true',
-                    help='use pt data, do not check img files')
 
 parser.add_argument("--test_patches", dest='test_patches', action='store_true',
                     help="Divide image into patches")
@@ -94,11 +90,11 @@ parser.add_argument('--body_part', '-bp',type=str, nargs='+', choices=['C', 'L',
                     help='choose body part in ldct-projection-mayo')
 
 #phantom dataset specifications
-parser.add_argument('--anatomy', type=str, default='chest',
+parser.add_argument('--anatomy', type=str, default=['chest'], nargs='+',
                     help='Specify anatomy of phantom dataset (chest/hn/pelvis)')
-parser.add_argument('--mA_full', '-f', type=str, default='level1', choices = ['level1','level2','level3','level4','level5','level6'],
+parser.add_argument('--mA_full', '-f', type=str, default='level3', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify full mA level 1,2,3,4,5,6 of phantom dataset')
-parser.add_argument('--mA_low', '-l',type=str, default='level3', choices = ['level1','level2','level3','level4','level5','level6'],
+parser.add_argument('--mA_low', '-l',type=str, default='level5', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify low mA level 1,2,3,4,5,6 of phantom dataset')
 
 #edsr
@@ -121,8 +117,6 @@ parser.add_argument('--test_every', type=int, default=1000,
                     help='do test per every N batches')
 parser.add_argument('--checkpoint_dir', type=str, default=checkpoint_dir,
                     help='Path to checkpoint directory')
-parser.add_argument('--checkpoint_dir_D', type=str, default=checkpoint_dir,
-                    help='Path to discriminator checkpoint directory')
 parser.add_argument('--select_checkpoint', default=False, action='store_true',
                     help='Choose checkpoint directory')
 parser.add_argument('--resume', default=False, action='store_true',
@@ -141,8 +135,6 @@ parser.add_argument("--optimizer", type=str, default='adam',
 parser.add_argument('--loss', type=str, default='l1', choices=['l1','l2'])
 parser.add_argument('--lr', type=float, default=0.0001,
                     help='Adam: learning rate')
-parser.add_argument('--lambda_adv_target', type=float, default=0.001, 
-                    help="lambda_adv for adversarial training.")
 parser.add_argument('--b1', type=float, default=0.9,
                     help='Adam: decay of first order momentum of gradient')
 parser.add_argument('--b2', type=float, default=0.999,
@@ -153,6 +145,7 @@ parser.add_argument('--batch_size', type=int, default=32,
                     help='Size of the batches')
 parser.add_argument('--n_epochs', type=int, default=200)
 parser.add_argument('--weight_decay', type=float, default= 0.001)
+parser.add_argument('--weight_decay_dc', type=float, default= 0.1)
 
 
 #Unet
@@ -166,18 +159,8 @@ parser.add_argument('--lambda_gp', type=float, default= 10,
 parser.add_argument('--wgan_loss', default=False, action='store_true',
                     help='include wgan_loss to generator or not')
 
-#self-supervised
-parser.add_argument('--noise', default=False, action='store_true',
-                    help='include noise')
-parser.add_argument('--filter', default=True, action='store_true',
-                    help='include filtering')
 
-#bilateral filter
-parser.add_argument('--filter_dataset', type=str, default='1mm', choices=['1mm','3mm', 'both'])
-parser.add_argument('--d', type=int, default= 2, 
-                    help='diameter for bilateral filter settting')
-parser.add_argument('--window_size', type=float, default= 13.0, 
-                    help='window for bilateral filter apply')
+
 
 args = parser.parse_args()
 
@@ -201,13 +184,9 @@ else:
 if args.train_datasets is None:
     args.train_datasets = [args.source]
 
-if args.way == 'adv':
-    args.model = 'discriminator'
-elif args.way == 'wadv':
-    args.model_d = 'wgan'
-elif args.way == 'wgan':
+if args.way == 'wgan':
     args.model = 'wganvgg'
-elif args.way == 'wganadv':
-    args.model = 'wganvgg'
+elif args.way == 'wganrev':
+    args.model = 'wganvgg_rev'
 
 torch.manual_seed(args.seed)
