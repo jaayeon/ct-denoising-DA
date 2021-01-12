@@ -1,4 +1,4 @@
-Code
+Domain Adaptation in Phantom & Real CT Denoising  
 ===============
 reference code is available in https://github.com/SSinyu/WGAN_VGG/blob/master/networks.py
 ---------------

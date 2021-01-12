@@ -9,9 +9,7 @@ def set_model(opt):
     elif opt.model == 'unet':
         module_name = 'models.unet'
     elif opt.model == 'edsr':
-        module_name = 'models.edsr'
-    elif opt.model == 'unet_c':
-        module_name = 'models.unet_c'    
+        module_name = 'models.edsr'   
     elif opt.model == 'wganvgg':
         module_name = 'models.wganvgg'
     elif opt.model == 'wganvgg_rev':
