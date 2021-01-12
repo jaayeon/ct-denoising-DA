@@ -116,7 +116,6 @@ def load_model(opt, model, optimizer=None):
         checkpoint_dir = os.path.join(opt.checkpoint_dir, opt.model)
         raise RuntimeError("Please check option to load model")
 
-
     # we will check from last, best, and specific epoch_num model
     # checkpoint_list = os.listdir(checkpoint_dir)
     checkpoint_list = glob.glob(os.path.join(checkpoint_dir, "*.pth"))
@@ -149,8 +148,8 @@ def load_model(opt, model, optimizer=None):
     print("Using epoch_num:", n_epoch)
     
     opt.checkpoint_dir = checkpoint_dir
-    # print(model)
-    if opt.model == 'wganvgg':
+    print(model)
+    if opt.model == 'wganvgg' or 'wganvgg_rev':
         return n_epoch+1, model.generator, optimizer
     else : 
         return n_epoch + 1, model, optimizer

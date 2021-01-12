@@ -47,8 +47,9 @@ def set_checkpoint_dir(opt):
         for bp in opt.body_part:
             model_opt = model_opt + bp
     elif opt.source in ['siemens', 'ge', 'toshiba']:
-        model_opt = model_opt + '-{}'.format(opt.anatomy)
-    
+        for at in opt.anatomy:
+            model_opt = model_opt + '-{}'.format(at)
+
     opt.checkpoint_dir = os.path.join(opt.checkpoint_dir, model_opt)
 
 def set_test_dir(opt):
