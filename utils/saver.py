@@ -75,20 +75,10 @@ def select_checkpoint_dir(opt):
 
     return checkpoint_dir
 
-def save_checkpoint(opt, model, optimizer, epoch, loss, model_type='M'):
+def save_checkpoint(opt, model, optimizer, epoch, loss):
     # checkpoint_dir = os.path.join(opt.checkpoint_dir, opt.model + '-patch' + str(opt.patch_size))
-    if model_type == 'M' : 
-        checkpoint_dir = opt.checkpoint_dir
-        model_name = opt.model
-    elif model_type == 'D' : 
-        checkpoint_dir = opt.checkpoint_dir_D
-        model_name = 'discriminator'
-    elif model_type == 'auto':
-        checkpoint_dir = opt.checkpoint_dir_auto
-
-    else : 
-        print("Wrong model type", model_type)
-        raise KeyboardInterrupt
+    checkpoint_dir = opt.checkpoint_dir
+    model_name = opt.model
 
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
