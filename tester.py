@@ -1,5 +1,4 @@
-import sys, os
-import glob
+import sys, os, glob
 import time
 
 from skimage.external.tifffile import imsave, imread
