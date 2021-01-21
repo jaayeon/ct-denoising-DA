@@ -54,8 +54,8 @@ def load_config(opt):
         opt.gt_img_dir = r'../../data/denoising/test/piglet/full/*'
         opt.img_dir = r'../../data/denoising/test/piglet/Oten/*'
     else:
-        opt.gt_img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(opt.target, opt.anatomy, opt.mA_full)
-        opt.img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(opt.target, opt.anatomy, opt.mA_low)
+        opt.gt_img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(opt.target, opt.anatomy[0], opt.mA_full)
+        opt.img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(opt.target, opt.anatomy[0], opt.mA_low)
     return opt
 
 

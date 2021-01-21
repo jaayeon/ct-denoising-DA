@@ -5,6 +5,7 @@ import torch.nn as nn
 from collections import OrderedDict
 from torchvision.models import vgg19
 import torchvision.transforms as transforms
+import torch.nn.functional as F
 
 def make_model(opt):
     return WGAN_VGG(opt)

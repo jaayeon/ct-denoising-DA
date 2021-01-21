@@ -110,7 +110,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 d_loss.backward()
                 optimizer_d.step()
 
-                adv_loss, dmgp_loss = net.adv_loss(src_img, trg_img, gp=True, return_gp=True)
+                adv_loss, dmgp_loss = net.adv_loss(src_img, src_lbl, trg_img, gp=True, return_gp=True)
                 adv_loss.backward()
                 optimizer_dc.step()
             #generator, perceptual loss
@@ -148,7 +148,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_img, trg_lbl = trg_img.to(opt.device), trg_lbl.to(opt.device)
 
             d_loss, gp_loss = net.d_loss(src_img,src_lbl,gp=True,return_gp=True)
-            adv_loss, dmgp_loss = net.adv_loss(src_img, trg_img, gp=True, return_gp=True)
+            adv_loss, dmgp_loss = net.adv_loss(src_img, src_lbl, trg_img, gp=True, return_gp=True)
             g_loss, px_loss, p_loss, fg_loss = net.g_loss(src_img,src_lbl,perceptual=True,return_p=True,pixel_wise=True)
 
             src_out = net.fake

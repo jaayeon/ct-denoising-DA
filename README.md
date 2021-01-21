@@ -17,7 +17,7 @@ reference code is available in https://github.com/SSinyu/WGAN_VGG/blob/master/ne
         ```
     * wganrev : Denoising with perceptual loss. Gradient reversal of target domain is included. Denoising model is wganvgg.
         ```
-        python main.py --way wganrev --source ge --target mayo --test_every 500
+        python main.py --way wganrev --source ge --target mayo --test_every 500 --vgg_weight 0.1
         ```
     * out2src : Denoising with fake_target low dataset. You have to specify the fake_dir_name of source dataset (only base name of dir, not the full path).
         ```
