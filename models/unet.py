@@ -115,7 +115,7 @@ class UNet(nn.Module):
             self.loss = self.Loss(out, lbl)
         
         return out
-        # return out, conv1,conv2,conv3,conv4
+        return out, conv2
 
 
 class single_conv(nn.Module):

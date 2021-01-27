@@ -114,7 +114,7 @@ parser.add_argument('--l_weight', type=float, default=1,
                     help = 'l1 pixel wise loss in gloss')
 
 #wganvgg_rev
-parser.add_argument('--dc_input', type=str, default='src_out', choices=['src_out', 'src_lbl', 'sum_lbl_out', 'sum_lbl_out2', 'concat', 'concat2'],
+parser.add_argument('--dc_input', type=str, default='src_out', choices=['src_out', 'src_lbl', 'sum_lbl_out', 'sum_lbl_out2', 'concat', 'concat2', 'feature'],
                     help = 'domain classifier input')
 
 parser.add_argument('--test_every', type=int, default=1000,

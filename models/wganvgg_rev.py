@@ -148,7 +148,7 @@ class WGAN_VGG(nn.Module):
         self.generator.eval()
         self.discriminator.train()
 
-        fake = self.generator(x)
+        fake,_ = self.generator(x)
         d_real = self.discriminator(y)
         d_fake = self.discriminator(fake)
         d_loss = -torch.mean(d_real) + torch.mean(d_fake)
@@ -165,15 +165,19 @@ class WGAN_VGG(nn.Module):
         self.generator.eval()
         self.domain_discriminator.train()
 
-        src_out = self.generator(src)
-        trg_out = self.generator(trg)
+        src_out, src_feature = self.generator(src)
+        trg_out, trg_feature = self.generator(trg)
 
         # d_src = self.domain_discriminator(src_out.detach())
         # d_trg = self.domain_discriminator(trg_out.detach())
+        src_out, trg_out = self.content_randomization(src_out,trg_out)
+        src_feature, trg_feature = self.content_randomization(src_feature, trg_feature)
 
         if dc_input == 'src_out':
             # (source'-source)
             d_src = self.domain_discriminator(src_out.detach()-src)
+        elif dc_input == 'feature':
+            d_src = self.domain_discriminator(src_feature.detach())
         elif dc_input == 'src_lbl':
             # (source*-source)
             d_src = self.domain_discriminator(src_lbl-src)
@@ -196,6 +200,8 @@ class WGAN_VGG(nn.Module):
         
         if dc_input == 'concat':
             d_trg = self.domain_discriminator(torch.cat((trg_out.detach()-trg, trg_out.detach()-trg), 1))
+        elif dc_input == 'feature':
+            d_trg = self.domain_discriminator(trg_feature.detach())
         elif dc_input == 'concat2':
             d_trg = self.domain_discriminator(torch.cat((trg_out.detach(), trg_out.detach()), 1))
         else:
@@ -234,7 +240,7 @@ class WGAN_VGG(nn.Module):
         self.discriminator.eval()
         self.domain_discriminator.eval()
     
-        self.fake = self.generator(x)
+        self.fake,_ = self.generator(x)
         d_fake = self.discriminator(self.fake) 
         g_loss = -torch.mean(d_fake) 
         if perceptual:
@@ -259,7 +265,7 @@ class WGAN_VGG(nn.Module):
         return (loss, px_loss, p_loss, fg_loss) if (return_p or adv) else loss
 
     def p_loss(self, x, y):
-        fake = self.generator(x).repeat(1,3,1,1)
+        fake = self.generator(x)[0].repeat(1,3,1,1)
         real = y.repeat(1,3,1,1)
         fake_feature = self.feature_extractor(fake)
         real_feature = self.feature_extractor(real)
@@ -306,6 +312,24 @@ class WGAN_VGG(nn.Module):
         elif x.size(0) < y.size(0) : 
             y = y[0:x.size(0), :, :, :]
         return x,y
+
+    def content_randomization(self, src, trg):
+        eps = 1e-5
+        x=torch.cat((src,trg),0)
+        n,c,h,w=x.size()
+        x=x.view(n,c,-1)
+        mean=x.mean(-1,keepdim=True)
+        var=x.var(-1,keepdim=True)
+
+        x=(x-mean)/(var+eps).sqrt()
+
+        idx_swap=torch.randperm(n)
+        x=x[idx_swap].detach()
+
+        x=x*(var+eps).sqrt()+mean
+        x=x.view(n,c,h,w)
+
+        return x[:int(n/2)], x[int(n/2):]
 
 '''
 class WGAN_VGG(nn.Module):
