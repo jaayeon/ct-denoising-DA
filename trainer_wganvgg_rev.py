@@ -1,5 +1,4 @@
-import os, time, scipy.io, shutil, glob
-# import re
+import os, time
 import numpy as np
 import math
 
@@ -7,7 +6,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-# from torch.autograd import Variable
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from torch.utils.data import DataLoader
 

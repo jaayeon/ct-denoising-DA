@@ -2,10 +2,8 @@ import os
 import numpy as np
 import torch
 import torch.nn as nn
-from collections import OrderedDict
 from torchvision.models import vgg19
-import torchvision.transforms as transforms
-from . import unet
+import torch.nn.functional as F
 
 def make_model(opt):
     return WGAN_VGG(opt)
@@ -74,7 +72,6 @@ class WGAN_VGG_generator(nn.Module):
                 x = layer(x,self.down[5-i]) #i:[3,4,5]-->down:[d3,d2,d1]
             if i+1==self.style_stage:
                 feature=x
-            print('x.shape : {}'.format(x.size()))
         
         out = self.outc(x)
         out = out + inx
@@ -292,7 +289,7 @@ class WGAN_VGG(nn.Module):
         self.discriminator.eval()
         self.domain_discriminator.eval()
     
-        self.fake,_ = self.generator(x)
+        self.fake,src_feature  = self.generator(x)
         d_fake = self.discriminator(self.fake) 
         g_loss = -torch.mean(d_fake) 
         if perceptual:
@@ -309,6 +306,8 @@ class WGAN_VGG(nn.Module):
         if adv:
             if self.dc_input == 'concat' or self.dc_input == 'concat2':
                 fg_loss = -self.rev_weight * torch.mean(self.domain_discriminator(torch.cat((self.fake, self.fake), 1)))
+            elif self.dc_input == 'feature':
+                fg_loss = -self.rev_weight * torch.mean(self.domain_discriminator(src_feature))
             else:
                 fg_loss = -self.rev_weight * torch.mean(self.domain_discriminator(self.fake))
             loss = loss + fg_loss
