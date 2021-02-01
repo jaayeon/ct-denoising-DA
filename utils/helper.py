@@ -41,6 +41,9 @@ def set_checkpoint_dir(opt):
         pass
     else : 
         model_opt = model_opt + '-' + opt.domain_sync
+
+    if opt.content_randomization:
+        model_opt = model_opt + '-crdd'
     
     if opt.source == 'lp-mayo':
         model_opt = model_opt + '-'

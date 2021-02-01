@@ -118,6 +118,8 @@ parser.add_argument('--dc_input', type=str, default='src_out', choices=['src_out
                     help = 'domain classifier input')
 parser.add_argument('--style_stage', type=int, default=4, choices=[1,2,3,4,5,6],
                     help='stage for feature which is extracted from generator to domain classifier input')
+parser.add_argument('--content_randomization', default=False, action='store_true')
+parser.add_argument('--sagnet', default=False, action='store_true')
 
 parser.add_argument('--test_every', type=int, default=1000,
                     help='do test per every N batches')
@@ -137,7 +139,7 @@ parser.add_argument('--ensemble', default=False, action='store_true',
 
 # Optimizer specification
 parser.add_argument("--optimizer", type=str, default='adam',
-                    help="Loss function (adam, sgd)")
+                    help="Loss function (adam, sgd, rms)")
 parser.add_argument('--loss', type=str, default='l1', choices=['l1','l2'])
 parser.add_argument('--lr', type=float, default=0.0001,
                     help='Adam: learning rate')

@@ -29,8 +29,13 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     if opt.optimizer == 'adam':
         optimizer_g = optim.Adam(net.generator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
         optimizer_d = optim.Adam(net.discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
-        optimizer_dc = optim.Adam(net.domain_discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay_dc)
-        print("===> Use Adam optimizer_g")
+        optimizer_dc = optim.Adam(net.domain_classifier.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay_dc)
+        print("===> Use Adam optimizer")
+    elif opt.optimizer == 'rms':
+        optimizer_g = optim.RMSprop(net.generator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay, centered=False)
+        optimizer_d = optim.RMSprop(net.discriminator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay, centered=False)
+        optimizer_dc = optim.RMSprop(net.domain_classifier.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay_dc, centered=False)
+        print("===> Use RMSprop optimizer")
     
     if opt.resume:
         #not possible
@@ -48,7 +53,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     if opt.multi_gpu:
         net.generator = nn.DataParallel(net.generator)
         net.discriminator = nn.DataParallel(net.discriminator)
-        net.domain_discriminator = nn.DataParallel(net.domain_discriminator)
+        net.domain_classifier = nn.DataParallel(net.domain_classifier)
         net.feature_extractor = nn.DataParallel(net.feature_extractor)
     
     scheduler = ReduceLROnPlateau(optimizer_g, factor=0.5, patience=5, mode='min')
@@ -86,7 +91,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
         net.generator.train()
         net.discriminator.train()
-        net.domain_discriminator.train()
+        net.domain_classifier.train()
 
         print("*** Training ***")
         start_time = time.time()
@@ -102,7 +107,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             optimizer_d.zero_grad()
             optimizer_dc.zero_grad()
             net.discriminator.zero_grad()
-            net.domain_discriminator.zero_grad()
+            net.domain_classifier.zero_grad()
             for _ in range(opt.n_d_train):
                 d_loss, gp_loss = net.d_loss(src_img, src_lbl, gp=True, return_gp=True)
                 d_loss.backward()
@@ -135,7 +140,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
         net.generator.eval()
         net.discriminator.eval()
-        net.domain_discriminator.eval()
+        net.domain_classifier.eval()
         print("***Validation***")
         for iteration_v, batch in enumerate(zip(src_v_loader, trg_v_loader), 1):
             src_img, src_lbl = batch[0][0], batch[0][1]
