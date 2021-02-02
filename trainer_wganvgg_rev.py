@@ -6,12 +6,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR, MultiStepLR
 from torch.utils.data import DataLoader
 
 from models import set_model
 from utils.saver import load_model, save_checkpoint, save_config
 from utils.helper import set_gpu, set_checkpoint_dir
+from utils.record import Record
+from collections import OrderedDict
 
 def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
@@ -22,25 +24,23 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     net = set_model(opt)
     print(net)
 
-    # if opt.use_cuda:
-    #     net = net.to(opt.device)
-    
     print("Setting Optimizer")
     if opt.optimizer == 'adam':
         optimizer_g = optim.Adam(net.generator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
         optimizer_d = optim.Adam(net.discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
-        optimizer_dc = optim.Adam(net.domain_classifier.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay_dc)
+        optimizer_dc = optim.Adam(net.domain_discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay_dc)
+        optimizer_rev = optim.Adam(net.generator.style_params(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
         print("===> Use Adam optimizer")
     elif opt.optimizer == 'rms':
         optimizer_g = optim.RMSprop(net.generator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay, centered=False)
         optimizer_d = optim.RMSprop(net.discriminator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay, centered=False)
-        optimizer_dc = optim.RMSprop(net.domain_classifier.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay_dc, centered=False)
+        optimizer_dc = optim.RMSprop(net.domain_discriminator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay_dc, centered=False)
+        optimizer_rev = optim.RMSprop(net.generator.style_params(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay_dc, centered=False)
         print("===> Use RMSprop optimizer")
     
     if opt.resume:
         #not possible
         opt.start_epoch, net, optimizer_g = load_model(opt, net, optimizer=optimizer_g)
-        # _, net_D, optimizer_d = load_model(opt, net_D, optimizer_g=optimizer_d)
     else:
         set_checkpoint_dir(opt)
 
@@ -53,16 +53,19 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     if opt.multi_gpu:
         net.generator = nn.DataParallel(net.generator)
         net.discriminator = nn.DataParallel(net.discriminator)
-        net.domain_classifier = nn.DataParallel(net.domain_classifier)
+        net.domain_discriminator = nn.DataParallel(net.domain_discriminator)
         net.feature_extractor = nn.DataParallel(net.feature_extractor)
     
-    scheduler = ReduceLROnPlateau(optimizer_g, factor=0.5, patience=5, mode='min')
+    scheduler_g = ReduceLROnPlateau(optimizer_g, factor=0.5, patience=5, mode='min')
+    scheduler_d = ReduceLROnPlateau(optimizer_d, factor=0.5, patience=5, mode='min')
+    scheduler_dc = ReduceLROnPlateau(optimizer_dc, factor=0.5, patience=5, mode='min')
+    scheduler_rev = ReduceLROnPlateau(optimizer_rev, factor=0.5, patience=5, mode='min')
+    # scheduler_rev = ReduceLROnPlateau(optimizer_rev, factor=0.5, patience=5, mode='min')
     # scheduler = StepLR(optimizer_g, step_size=50, gamma=0.5)
 
     # Create log file when training start
     if opt.start_epoch == 1:
-        with open(log_file, mode='w') as f:
-            f.write("epoch, gloss_t, pxloss_t, ploss_t, fgloss_t, dloss_t, gploss_t, advloss_t, dmgploss_t, psnr_t, gloss_v, pxloss_v, ploss_v, fgloss_v, dloss_v, gploss_v, advloss_v, dmgploss_v, psnr_v\n")
+        record = Record(opt, log_file=log_file, train_length=len(src_t_loader), valid_length=len(src_v_loader))
         save_config(opt)
 
     mse_criterion = nn.MSELoss()
@@ -82,20 +85,15 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             print("optim_d lr : ", param_group['lr'])
         for param_group in optimizer_dc.param_groups:
             print("optim_dc lr : ", param_group['lr'])
-
-        train_losses = np.array([0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0])
-        valid_losses = np.array([0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0])
-        train_psnr = 0.0
-        valid_spsnr = 0.0
-        valid_tpsnr = 0.0
+        for param_group in optimizer_rev.param_groups:
+            print("optim_rev lr : ", param_group['lr'])
 
         net.generator.train()
         net.discriminator.train()
-        net.domain_classifier.train()
+        net.domain_discriminator.train()
 
         print("*** Training ***")
-        start_time = time.time()
-        for iteration_t, batch in enumerate(zip(src_t_loader, trg_t_loader), 1):
+        for batch in zip(src_t_loader, trg_t_loader):
             src_img, src_lbl = batch[0][0], batch[0][1]
             trg_img, trg_lbl = batch[1][0], batch[1][1]
 
@@ -107,42 +105,52 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             optimizer_d.zero_grad()
             optimizer_dc.zero_grad()
             net.discriminator.zero_grad()
-            net.domain_classifier.zero_grad()
+            net.domain_discriminator.zero_grad()
             for _ in range(opt.n_d_train):
-                d_loss, gp_loss = net.d_loss(src_img, src_lbl, gp=True, return_gp=True)
+                d_loss, gp_loss = net.d_loss(src_img, src_lbl, gp=True, return_losses=True)
                 d_loss.backward()
                 optimizer_d.step()
 
-                adv_loss, dmgp_loss = net.adv_loss(src_img, src_lbl, trg_img, gp=True, return_gp=True)
-                adv_loss.backward()
+                dc_loss, dcgp_loss = net.dc_loss(src_img, src_lbl, trg_img, gp=True, return_losses=True)
+                dc_loss.backward()
                 optimizer_dc.step()
-            #generator, perceptual loss
+
+            #generator & reversal 
             optimizer_g.zero_grad()
+            optimizer_rev.zero_grad()
             net.generator.zero_grad()
-            g_loss, px_loss, p_loss, fg_loss = net.g_loss(src_img, src_lbl, perceptual=True, return_p=True, pixel_wise=True, adv=True)
+            # g_loss, px_loss, p_loss, fg_loss= net.g_loss(src_img, src_lbl, perceptual=True, return_p=True, pixel_wise=True, adv=True)
+            g_loss, adv_loss, l_loss, p_loss= net.g_loss(src_img, src_lbl, perceptual=True, pixel_wise=True, return_losses=True)
+            rev_loss = net.rev_loss(src_img)
             g_loss.backward()
+            rev_loss.backward()
             optimizer_g.step()
+            optimizer_rev.step()
 
-            out = net.fake
-            #gloss, ploss, fgloss, dloss, gploss, advloss, domain_gploss
-            train_loss = [g_loss.item()-px_loss.item()-p_loss.item()-fg_loss.item(), px_loss.item(), p_loss.item(), fg_loss.item(), d_loss.item()-gp_loss.item(), gp_loss.item(), adv_loss.item()-dmgp_loss.item(), dmgp_loss.item()]
-            train_losses += train_loss
+            #calculate psnr
+            src_out = net.src_out
+            trg_out = net.trg_out
+            mse_loss = mse_criterion(src_out, src_lbl)
+            spsnr = 10 * math.log10(1 / mse_loss.item())
+            nmse_loss = mse_criterion(src_img, src_lbl)
+            nspsnr = 10 * math.log10(1 / nmse_loss.item())
+            mse_loss = mse_criterion(trg_out, trg_lbl)
+            tpsnr = 10 * math.log10(1 / mse_loss.item())
+            nmse_loss = mse_criterion(trg_img, trg_lbl)
+            ntpsnr = 10 * math.log10(1 / nmse_loss.item())
 
-            # print("max(out):", torch.max(out))
-            # print("min(out):", torch.min(out))
-            mse_loss = mse_criterion(out, src_lbl)
-            psnr = 10 * math.log10(1 / mse_loss.item())
-            train_psnr += psnr
+            #update status
+            status = [g_loss.item(), adv_loss.item(), l_loss.item(), p_loss.item(), rev_loss.item(), dc_loss.item(), d_loss.item(), spsnr, nspsnr, tpsnr, ntpsnr]
+            record.update_status(status, mode='train')
+            record.print_buffer(mode='train')
 
-            print("%s %.2fs => Epoch[%d/%d](%d/%d): gLoss: %.7f pxLoss: %.7f pLoss: %.7f fgLoss: %.7f dLoss: %.7f gpLoss: %.7f advLoss: %.7f domain_gpLoss: %.7f PSNR: %.5f" %
-                ('Training', time.time() - start_time, opt.epoch_num, opt.n_epochs, iteration_t, len(src_t_loader), train_loss[0], train_loss[1], train_loss[2], train_loss[3], train_loss[4], train_loss[5], train_loss[6], train_loss[7], psnr))
-
+        record.print_average(mode='train')
 
         net.generator.eval()
         net.discriminator.eval()
-        net.domain_classifier.eval()
+        net.domain_discriminator.eval()
         print("***Validation***")
-        for iteration_v, batch in enumerate(zip(src_v_loader, trg_v_loader), 1):
+        for batch in zip(src_v_loader, trg_v_loader):
             src_img, src_lbl = batch[0][0], batch[0][1]
             trg_img, trg_lbl = batch[1][0], batch[1][1]
 
@@ -150,71 +158,38 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 src_img, src_lbl = src_img.to(opt.device), src_lbl.to(opt.device)
                 trg_img, trg_lbl = trg_img.to(opt.device), trg_lbl.to(opt.device)
 
-            d_loss, gp_loss = net.d_loss(src_img,src_lbl,gp=True,return_gp=True)
-            adv_loss, dmgp_loss = net.adv_loss(src_img, src_lbl, trg_img, gp=True, return_gp=True)
-            g_loss, px_loss, p_loss, fg_loss = net.g_loss(src_img,src_lbl,perceptual=True,return_p=True,pixel_wise=True)
+            d_loss, gp_loss = net.d_loss(src_img,src_lbl,gp=True,return_losses=True)
+            dc_loss, dcgp_loss = net.dc_loss(src_img, src_lbl, trg_img, gp=True, return_losses=True)
+            # g_loss, px_loss, p_loss, fg_loss = net.g_loss(src_img,src_lbl,perceptual=True,return_p=True,pixel_wise=True)
+            g_loss, adv_loss, l_loss, p_loss = net.g_loss(src_img,src_lbl,perceptual=True, pixel_wise=True, return_losses=True)
+            rev_loss = net.rev_loss(src_img)
 
-            src_out = net.fake
-            _ = net.g_loss(trg_img, trg_lbl, perceptual=False)
-            trg_out = net.fake
-            
-            #gloss, ploss, fgloss, dloss, gploss, advloss, domain_gploss
-            valid_loss = [g_loss.item()-px_loss.item()-p_loss.item()-fg_loss.item(), px_loss.item(), p_loss.item(), fg_loss.item(), d_loss.item()-gp_loss.item(), gp_loss.item(), adv_loss.item()-dmgp_loss.item(), dmgp_loss.item()]
-            valid_losses += valid_loss
+            #calculate psnr
+            src_out = net.src_out
+            trg_out = net.trg_out
+            mse_loss = mse_criterion(src_out, src_lbl)
+            spsnr = 10 * math.log10(1 / mse_loss.item())
+            nmse_loss = mse_criterion(src_img, src_lbl)
+            nspsnr = 10 * math.log10(1 / nmse_loss.item())
+            mse_loss = mse_criterion(trg_out, trg_lbl)
+            tpsnr = 10 * math.log10(1 / mse_loss.item())
+            nmse_loss = mse_criterion(trg_img, trg_lbl)
+            ntpsnr = 10 * math.log10(1 / nmse_loss.item())
 
-            # print("max(out):", torch.max(out))
-            # print("min(out):", torch.min(out))
-            smse_loss = mse_criterion(src_out, src_lbl)
-            nsmse_loss = mse_criterion(src_out, src_img)
-            tmse_loss = mse_criterion(trg_out, trg_lbl)
-            ntmse_loss = mse_criterion(trg_out, trg_img)
-            spsnr = 10 * math.log10(1 / smse_loss.item())
-            nspsnr = 10 * math.log10(1 / nsmse_loss.item())
-            tpsnr = 10 * math.log10(1 / tmse_loss.item())
-            ntpsnr = 10 * math.log10(1 / ntmse_loss.item())
-            valid_spsnr += spsnr
-            valid_tpsnr += tpsnr
+            #update status
+            status = [g_loss.item(), adv_loss.item(), l_loss.item(), p_loss.item(), rev_loss.item(), dc_loss.item(), d_loss.item(), spsnr, nspsnr, tpsnr, ntpsnr]
+            record.update_status(status, mode='valid')
+            record.print_buffer(mode='valid')
 
-            print("%s %.2fs => Epoch[%d/%d](%d/%d): gLoss: %.7f pxLoss: %.7f pLoss: %.7f fgLoss: %.7f dLoss: %.7f gpLoss: %.7f advLoss: %.7f domain_gpLoss: %.7f noise_srcPSNR: %.5f srcPSNR: %.5f noise_trgPSNR: %.5f trgPSNR: %.5f" %('Validation', 
-            time.time() - start_time, opt.epoch_num, opt.n_epochs, iteration_t, len(src_t_loader), valid_loss[0], valid_loss[1], valid_loss[2], valid_loss[3], valid_loss[4], valid_loss[5], valid_loss[6], valid_loss[7], nspsnr, spsnr, ntpsnr, tpsnr))
+        record.print_average(mode='valid')
+        current_psnr = record.valid[9]
+        if current_best_psnr < current_psnr: #trg_psnr
+            save_checkpoint(opt, net, optimizer_g, epoch, current_psnr)
+            current_best_psnr = current_psnr
 
+        scheduler_g.step(mse_loss)
+        scheduler_d.step(mse_loss)
+        scheduler_dc.step(mse_loss)
+        scheduler_rev.step(mse_loss)
 
-        epoch_avg_train_loss = train_losses / iteration_t
-        epoch_avg_valid_loss = valid_losses / iteration_v
-        epoch_avg_train_psnr = train_psnr / iteration_t
-        epoch_avg_valid_spsnr = valid_spsnr / iteration_v
-        epoch_avg_valid_tpsnr = valid_tpsnr / iteration_v
-
-        scheduler.step(smse_loss)
-        print("Valid LOSS avg : gLoss: %.7f pLoss: %.7f pxLoss: %.7f fgLoss: %.7f dLoss: %.7f gpLoss: %.7f advLoss: %.7f domain_gpLoss: %.7f srcPSNR: %.5f trgPSNR: %.5f"%(epoch_avg_valid_loss[0], 
-                epoch_avg_valid_loss[1], epoch_avg_valid_loss[2], epoch_avg_valid_loss[3], epoch_avg_valid_loss[4], epoch_avg_valid_loss[5], epoch_avg_valid_loss[6], epoch_avg_valid_loss[7], epoch_avg_valid_spsnr, epoch_avg_valid_tpsnr))
-
-        with open(log_file, mode='a') as f:
-            f.write("%d,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f,%08f\n"%(
-                epoch,
-                epoch_avg_train_loss[0],
-                epoch_avg_train_loss[1],
-                epoch_avg_train_loss[2],
-                epoch_avg_train_loss[3],
-                epoch_avg_train_loss[4],
-                epoch_avg_train_loss[5],
-                epoch_avg_train_loss[6],
-                epoch_avg_train_loss[7],
-                epoch_avg_train_psnr,
-                epoch_avg_valid_loss[0],
-                epoch_avg_valid_loss[1],
-                epoch_avg_valid_loss[2],
-                epoch_avg_valid_loss[3],
-                epoch_avg_valid_loss[4],
-                epoch_avg_valid_loss[5],
-                epoch_avg_valid_loss[6],
-                epoch_avg_valid_loss[7],
-                epoch_avg_valid_tpsnr
-            ))
-
-        if current_best_psnr < epoch_avg_valid_tpsnr : 
-            save_checkpoint(opt, net, optimizer_g, epoch, epoch_avg_valid_tpsnr)
-            current_best_psnr = epoch_avg_valid_tpsnr
-
-
-    
+        record.write_log(epoch)

@@ -49,6 +49,7 @@ class WGAN_VGG_generator(nn.Module):
         self.style_stage = opt.style_stage
         self.output_size = opt.patch_size
         self.sagnet = sagnet
+        self.dc_input = opt.dc_input
         self.inc = down(block,self.nc,64,2,downsample=False,bn=sagnet)
 
         self.down1 = down(block,64,128,3,bn=sagnet)
@@ -81,17 +82,18 @@ class WGAN_VGG_generator(nn.Module):
     
     def style_params(self):
         params=[]
-        layers=[self.inc, self.down1, self.down2, self.down3, self.up1, self.up2, self.up3]
+        layers=[self.inc, self.down1, self.down2, self.down3, self.up1, self.up2, self.up3, self.outc]
         for i, layer in enumerate(layers):
-            if i <=  self.style_stage:
+            if i <= self.style_stage and self.sagnet and self.dc_input == 'feature':
                 for m in layer.modules():
                     if isinstance(m, nn.BatchNorm2d):
                         params += [p for p in m.parameters()]
+            elif i <= self.style_stage and self.dc_input == 'feature':
+                params += [p for p in layer.parameters()]
             else : 
-                pass
+                params += [p for p in layer.parameters()]
         return params
             
-
 
 class down(nn.Module):
     def __init__(self, block, in_ch, out_ch, rep, downsample=True, bn=False):
@@ -109,6 +111,7 @@ class down(nn.Module):
     def forward(self, x):
         out = self.conv(x)
         return out
+
 
 class up(nn.Module):
     def __init__(self, block, in_ch, out_ch, rep, bn=False):
@@ -135,24 +138,27 @@ class WGAN_VGG_discriminator(nn.Module):
     def __init__(self, input_size, input_channels):
         super(WGAN_VGG_discriminator, self).__init__()
         def conv_output_size(input_size, kernel_size_list, stride_list):
-            n = (input_size - kernel_size_list[0]) // stride_list[0] + 1
-            for k, s in zip(kernel_size_list[1:], stride_list[1:]):
-                n = (n - k) // s + 1
-                # n = (n - k + 2*1) // s + 1
+            # n = (input_size - kernel_size_list[0]) // stride_list[0] + 1
+            n=input_size
+            for k, s in zip(kernel_size_list, stride_list):
+                # n = (n - k) // s + 1
+                n = (n - k + 2*1) // s + 1
             return n
 
         def add_block(layers, ch_in, ch_out, stride):
-            layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 0))
-            # layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 1))
+            # layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 0))
+            layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 1))
             layers.append(nn.LeakyReLU())
             return layers
 
         layers = []
-        ch_stride_set = [(input_channels,64,1),(64,64,2),(64,128,1),(128,128,2),(128,256,1),(256,256,2)]
+        # ch_stride_set = [(input_channels,64,1),(64,64,2),(64,128,1),(128,128,2),(128,256,1),(256,256,2)]
+        ch_stride_set = [(input_channels,64,1),(64,64,1),(64,128,1),(128,128,1),(128,256,1),(256,256,1)]
         for ch_in, ch_out, stride in ch_stride_set:
             add_block(layers, ch_in, ch_out, stride)
 
-        self.output_size = conv_output_size(input_size, [3]*6, [1,2]*3)
+        # self.output_size = conv_output_size(input_size, [3]*6, [1,2]*3)
+        self.output_size = conv_output_size(input_size, [3]*6, [1]*6)
         self.net = nn.Sequential(*layers)
         self.fc1 = nn.Linear(256*self.output_size*self.output_size, 1024)
         self.fc2 = nn.Linear(1024, 1)
@@ -208,7 +214,7 @@ class WGAN_VGG(nn.Module):
         self.l_weight = opt.l_weight #l1 pixelwise loss weight
         self.dc_input = opt.dc_input
 
-    def d_loss(self, x, y, gp=True, return_gp=False):
+    def d_loss(self, x, y, gp=True, return_losses=False):
         self.generator.eval()
         self.discriminator.train()
 
@@ -222,20 +228,20 @@ class WGAN_VGG(nn.Module):
         else:
             gp_loss = torch.from_numpy(np.array(0.0))
             loss = d_loss
-        return (loss, gp_loss) if return_gp else loss
+        return (loss, gp_loss) if return_losses else loss
     
-    def adv_loss(self, src, src_lbl, trg, gp=True, return_gp=False):
+    def dc_loss(self, src, src_lbl, trg, gp=True, return_losses=False):
         dc_input = self.dc_input
         self.generator.eval()
         self.domain_discriminator.train()
 
-        src_out, src_feature = self.generator(src)
-        trg_out, trg_feature = self.generator(trg)
+        self.src_out, self.src_feature = self.generator(src)
+        self.trg_out, self.trg_feature = self.generator(trg)
 
         # d_src = self.domain_discriminator(src_out.detach())
         # d_trg = self.domain_discriminator(trg_out.detach())
-        src_out, trg_out = self.content_randomization(src_out, trg_out)
-        src_feature, trg_feature = self.content_randomization(src_feature, trg_feature)
+        src_out, trg_out = self.content_randomization(self.src_out, self.trg_out)
+        src_feature, trg_feature = self.content_randomization(self.src_feature, self.trg_feature)
 
         if dc_input == 'src_out':
             # (source'-source)
@@ -298,39 +304,48 @@ class WGAN_VGG(nn.Module):
         else : 
             gp_loss = torch.from_numpy(np.array(0.0))
             loss = adv_loss
-        return (loss, gp_loss) if return_gp else loss
+        return (loss, gp_loss) if return_losses else loss
    
 
-    def g_loss(self, x, y, perceptual=True, return_p=False, pixel_wise=False, adv=False):
+    def g_loss(self, x, y, perceptual=True, pixel_wise=False, return_losses=True):
         self.generator.train()
         self.discriminator.eval()
         self.domain_discriminator.eval()
     
-        self.fake,src_feature  = self.generator(x)
-        d_fake = self.discriminator(self.fake) 
-        g_loss = -torch.mean(d_fake) 
+        self.src_out, self.src_feature  = self.generator(x)
+        d_fake = self.discriminator(self.src_out) 
+        adv_loss = -torch.mean(d_fake) 
         if perceptual:
             p_loss = self.vgg_weight * self.p_loss(x, y)
-            loss = g_loss + p_loss
+            loss = adv_loss + p_loss
         else:
             p_loss = torch.from_numpy(np.array(0.0))
-            loss = g_loss
+            loss = adv_loss
         if pixel_wise:
-            px_loss = self.l_weight * self.l_criterion(self.fake, y)
+            px_loss = self.l_weight * self.l_criterion(self.src_out, y)
             loss = loss + px_loss
         else : 
             px_loss = torch.from_numpy(np.array(0.0))
-        if adv:
-            if self.dc_input == 'concat' or self.dc_input == 'concat2':
-                fg_loss = -self.rev_weight * torch.mean(self.domain_discriminator(torch.cat((self.fake, self.fake), 1)))
-            elif self.dc_input == 'feature':
-                fg_loss = -self.rev_weight * torch.mean(self.domain_discriminator(src_feature))
-            else:
-                fg_loss = -self.rev_weight * torch.mean(self.domain_discriminator(self.fake))
-            loss = loss + fg_loss
-        else : 
-            fg_loss = torch.from_numpy(np.array(0.0))
-        return (loss, px_loss, p_loss, fg_loss) if (return_p or adv) else loss
+
+        # return (loss, px_loss, p_loss, fg_loss) if (return_p or adv) else loss
+        return (loss, adv_loss, px_loss, p_loss) if return_losses else loss
+
+    def rev_loss(self, x):
+        self.generator.train()
+        self.discriminator.eval()
+        self.domain_discriminator.eval()
+
+        self.src_out, self.src_feature  = self.generator(x)
+
+        if self.dc_input == 'concat' or self.dc_input == 'concat2':
+            rev_loss = -self.rev_weight * torch.mean(self.domain_discriminator(torch.cat((self.src_out, self.src_out), 1)))
+        elif self.dc_input == 'feature':
+            rev_loss = -self.rev_weight * torch.mean(self.domain_discriminator(self.src_feature))
+        else:
+            rev_loss = -self.rev_weight * torch.mean(self.domain_discriminator(self.src_out))
+
+        return rev_loss
+
 
     def p_loss(self, x, y):
         fake = self.generator(x)[0].repeat(1,3,1,1)
@@ -404,7 +419,7 @@ class WGAN_VGG(nn.Module):
         self.rev_weight = opt.rev_weight #reversal gradient loss weight
         self.l_weight = opt.l_weight #l1 pixelwise loss weight
 
-    def d_loss(self, x, y, gp=True, return_gp=False):
+    def d_loss(self, x, y, gp=True, return_losses=False):
         self.generator.eval()
         self.discriminator.train()
 
@@ -418,9 +433,9 @@ class WGAN_VGG(nn.Module):
         else:
             gp_loss = torch.from_numpy(np.array(0.0))
             loss = d_loss
-        return (loss, gp_loss) if return_gp else loss
+        return (loss, gp_loss) if return_losses else loss
     
-    def adv_loss(self, src, trg, gp=True, return_gp=False):
+    def adv_loss(self, src, trg, gp=True, return_losses=False):
         self.generator.eval()
         self.domain_discriminator.train()
 
@@ -438,7 +453,7 @@ class WGAN_VGG(nn.Module):
         else : 
             gp_loss = torch.from_numpy(np.array(0.0))
             loss = adv_loss
-        return (loss, gp_loss) if return_gp else loss
+        return (loss, gp_loss) if return_losses else loss
    
 
     def g_loss(self, x, y, perceptual=True, return_p=False, pixel_wise=False, adv=False):
@@ -446,8 +461,8 @@ class WGAN_VGG(nn.Module):
         self.discriminator.eval()
         self.domain_discriminator.eval()
 
-        self.fake = self.generator(x)
-        d_fake = self.discriminator(self.fake) 
+        self.src_out = self.generator(x)
+        d_fake = self.discriminator(self.src_out) 
         g_loss = -torch.mean(d_fake) 
         if perceptual:
             p_loss = self.vgg_weight * self.p_loss(x, y)
@@ -456,12 +471,12 @@ class WGAN_VGG(nn.Module):
             p_loss = torch.from_numpy(np.array(0.0))
             loss = g_loss
         if pixel_wise:
-            px_loss = self.l_weight * self.l_criterion(self.fake, y)
+            px_loss = self.l_weight * self.l_criterion(self.src_out, y)
             loss = loss + px_loss
         else : 
             px_loss = torch.from_numpy(np.array(0.0))
         if adv:
-            fg_loss = -self.rev_weight * torch.mean(self.domain_discriminator(self.fake))
+            fg_loss = -self.rev_weight * torch.mean(self.domain_discriminator(self.src_out))
             loss = loss + fg_loss
         else : 
             fg_loss = torch.from_numpy(np.array(0.0))
