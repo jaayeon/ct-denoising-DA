@@ -19,6 +19,9 @@ reference code is available in https://github.com/SSinyu/WGAN_VGG/blob/master/ne
         ```
         python main.py --way wganrev --source ge --target mayo --test_every 500 --vgg_weight 0.1
         ```
+        ```
+        python main.py --way wganrev --test_every 400 --dc_input feature --style_stage 4 --content_randomization
+        ```
     * out2src : Denoising with fake_target low dataset. You have to specify the fake_dir_name of source dataset (only base name of dir, not the full path).
         ```
         python main.py --way wganrev --source ge --target mayo --domain_sync out2src --fake_dir fake_dir
