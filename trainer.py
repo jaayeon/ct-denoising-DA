@@ -12,7 +12,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from torch.utils.data import DataLoader
 
 from models import set_model
-from utils.saver import load_model, save_checkpoint, save_config
+from utils.loader import load_model
+from utils.saver import Record
 from utils.helper import set_gpu, set_checkpoint_dir
 
 def run_train(opt, training_dataloader, valid_dataloader):

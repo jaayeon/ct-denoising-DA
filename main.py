@@ -7,7 +7,7 @@ import trainer_wganvgg_rev as WREVT
 import tester as TST
 import tester_lpmayo as TSTM
 
-from utils.saver import load_config
+from utils.loader import load_config
 from options import args
 
 if __name__ == '__main__':

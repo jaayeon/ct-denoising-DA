@@ -1,146 +1,107 @@
 import os
-import glob
 import json
 import torch
+import time
 
-def save_config(opt):
-    config_file = os.path.join(opt.checkpoint_dir, "config.txt")
-    with open(config_file, 'w') as f:
-        json.dump(opt.__dict__, f, indent=2)
+class Record():
+    def __init__(self, opt, train_length=None, valid_length=None, keys=None):
+        self.opt = opt
+        self.checkpoint_dir = opt.checkpoint_dir
+        self.model_name = opt.model
 
-def load_config(opt):
-    batch_size = opt.batch_size
-    mode = opt.mode
-    ensemble = opt.ensemble
-    epoch_num = opt.epoch_num
-    resume_best = opt.resume_best
-    resume = opt.resume
-    patch_size = opt.patch_size
-    test_patches = opt.test_patches
-    patch_offset = opt.patch_offset
-    target = opt.target
-    mA_full = opt.mA_full
-    mA_low = opt.mA_low
-    anatomy = opt.anatomy
-    thickness = opt.thickness
+        self.keys = keys
+        self.key_length = len(self.keys)
+        self.n_epochs = opt.n_epochs
+        self.train_length = train_length
+        self.valid_length = valid_length
 
-    checkpoint_dir = select_checkpoint_dir(opt)
-    
-    config_file = os.path.join(checkpoint_dir, "config.txt")
-    with open(config_file, 'r') as f:
-        opt.__dict__ = json.load(f)
-    
-    opt.checkpoint_dir = checkpoint_dir
-    opt.ensemble = ensemble
-    opt.batch_size = batch_size
-    opt.mode = mode
-    opt.epoch_num = epoch_num
-    opt.resume_best = resume_best
-    opt.resume = resume
-    opt.patch_size = patch_size
-    opt.test_patches = test_patches
-    opt.patch_offset = patch_offset
-    opt.target = target
-    opt.anatomy = anatomy
-    opt.thickness = thickness
+        self.epoch = 1
+        self.train = [0]*self.key_length
+        self.valid = [0]*self.key_length
+        self.buffer = [0]*self.key_length
+        self.start_time = time.time()
+        self.train_iter = 0
+        self.valid_iter = 0
+        self.best_psnr = 0
 
-    if opt.target == 'lp-mayo':
-        opt.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
-        opt.img_dir = r'../../data/denoising/test/lp-mayo/low'
-    elif opt.target == 'mayo':
-        opt.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm/*'.format(opt.thickness)
-        opt.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm/*'.format(opt.thickness)
-    elif opt.target == 'piglet':
-        opt.gt_img_dir = r'../../data/denoising/test/piglet/full/*'
-        opt.img_dir = r'../../data/denoising/test/piglet/Oten/*'
-    else:
-        opt.gt_img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(opt.target, opt.anatomy[0], opt.mA_full)
-        opt.img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(opt.target, opt.anatomy[0], opt.mA_low)
-    return opt
+        self.log_file = os.path.join(self.checkpoint_dir, opt.model + "_log.csv")
+        self.opt_file = os.path.join(self.checkpoint_dir, "config.txt")
 
+        if not os.path.exists(self.checkpoint_dir):
+            os.makedirs(self.checkpoint_dir)
 
-def select_checkpoint_dir(opt):
-    checkpoint_dir = opt.checkpoint_dir
-    dirs = os.listdir(checkpoint_dir)
+        with open(self.log_file, mode='w') as f:
+            f.write('epoch, {}, {}'.format('-t, '.join(self.keys), '-v, '.join(self.keys)))
 
-    for i, d in enumerate(dirs, 0):
-        print("(%d) %s" % (i, d))
-    d_idx = input("Select directory that you want to load: ")
+        with open(self.opt_file, 'w') as f:
+            json.dump(opt.__dict__, f, indent=2)
 
-    path_opt = dirs[int(d_idx)]
-    opt.path_opt = path_opt
+    def update_status(self, buffer, mode='train'):
+        #update buffer and add it to train/valid
+        self.buffer = buffer
+        if mode=='train':
+            self.train_iter += 1
+            for i in range(self.key_length):
+                self.train[i] += self.buffer[i]
+        else : 
+            self.valid_iter += 1
+            for i in range(self.key_length):
+                self.valid[i] += self.buffer[i]
 
-    checkpoint_dir = os.path.abspath(os.path.join(checkpoint_dir, dirs[int(d_idx)]))
-    print("checkpoint_dir is: {}".format(checkpoint_dir))
+    def print_buffer(self, mode='train'):
+        #print buffer
+        now = time.time()-self.start_time
+        if mode == 'train':
+            mode='Training'
+            print('{} {:.2f}s => Epoch[{}/{}]({}/{}) : {}'.format(mode, now, self.epoch, self.n_epochs, self.train_iter, self.train_length,
+                    ', '.join(['{}:{:2.3f}'.format(self.keys[i], self.buffer[i]) for i in range(self.key_length)])))
+        else : 
+            mode='Validation'
+            print('{} {:.2f}s => Epoch[{}/{}]({}/{}) : {}'.format(mode, now, self.epoch, self.n_epochs, self.valid_iter, self.valid_length,
+                    ', '.join(['{}:{:2.3f}'.format(self.keys[i], self.buffer[i]) for i in range(self.key_length)])))
 
-    return checkpoint_dir
+    def print_average(self, mode='train'):
+        #update train/valid to average & print status
+        if mode == 'train':
+            for i in range(self.key_length):
+                self.train[i] = self.train[i]/self.train_length
+            print('[*] Training Epoch[{}/{}] : {}'.format(self.epoch, self.n_epochs,
+                ', '.join(['{}:{:.3f}'.format(self.keys[i], self.train[i]) for i in range(self.key_length)])))
+        else : 
+            for i in range(self.key_length):
+                self.valid[i] = self.valid[i]/self.valid_length
+            print('[*] Validation Epoch[{}/{}] : {}'.format(self.epoch, self.n_epochs,
+                ', '.join(['{}:{:.3f}'.format(self.keys[i], self.valid[i]) for i in range(self.key_length)])))
 
-def save_checkpoint(opt, model, optimizer, epoch, loss):
-    # checkpoint_dir = os.path.join(opt.checkpoint_dir, opt.model + '-patch' + str(opt.patch_size))
-    checkpoint_dir = opt.checkpoint_dir
-    model_name = opt.model
-
-    if not os.path.exists(checkpoint_dir):
-        os.makedirs(checkpoint_dir)
-    checkpoint_path = os.path.join(checkpoint_dir, "%s_epoch_%04d_loss_%.8f.pth" % (model_name, epoch, loss))
-    checkpoint_path = os.path.abspath(checkpoint_path)
-    
-    if torch.cuda.device_count() > 1 and opt.multi_gpu:
-        state = {"epoch": epoch, "model": model.module.state_dict(), "optimizer": optimizer.state_dict()}
-    else:
-        state = {"epoch": epoch, "model": model.state_dict(), "optimizer": optimizer.state_dict()}
-
-    torch.save(state, checkpoint_path)
-    print("Checkpoint saved to {}".format(checkpoint_path))
+    def write_log(self):
+        #write log
+        with open(self.log_file, mode='a') as f:
+            f.write('{}, {}, {}\n'.format(self.epoch, ', '.join([str(i) for i in self.train]), ', '.join([str(i) for i in self.valid])))
+        #initiate it for next epoch
+        self.train = [0]*self.key_length
+        self.valid = [0]*self.key_length
+        self.train_iter = 0
+        self.valid_iter = 0
+        self.epoch +=1
+        self.start_time = time.time()
 
 
-def load_model(opt, model, optimizer=None):
-    if opt.mode == 'train':
-        checkpoint_dir = select_checkpoint_dir(opt)
-    elif opt.mode == 'test':
-        checkpoint_dir = opt.checkpoint_dir
-        print("Use {} director as checkpoint".format(os.path.abspath(opt.checkpoint_dir)))
-    elif opt.mode == 'result_sidd' or opt.mode == 'result':
-        checkpoint_dir = opt.checkpoint_dir
-    else:
-        checkpoint_dir = os.path.join(opt.checkpoint_dir, opt.model)
-        raise RuntimeError("Please check option to load model")
+    def save_checkpoint(self, model, optimizer, save_criterion=None):
+        #it should precede write_log() 
+        try : current_psnr = self.valid[self.keys.index(save_criterion)]
+        except : raise KeyError("'save criterion' should be one of keys")
 
-    # we will check from last, best, and specific epoch_num model
-    # checkpoint_list = os.listdir(checkpoint_dir)
-    checkpoint_list = glob.glob(os.path.join(checkpoint_dir, "*.pth"))
-    checkpoint_list.sort()
-    n_epoch = 0
+        if self.best_psnr < current_psnr :
+            self.best_psnr = current_psnr
+            checkpoint_path = os.path.join(self.checkpoint_dir, "{}_epoch_{}_psnr_{:.8f}.pth" .format(self.model_name, str(self.epoch).zfill(4), current_psnr))
+            checkpoint_path = os.path.abspath(checkpoint_path)
+            
+            if torch.cuda.device_count() > 1 and self.opt.multi_gpu:
+                state = {"epoch": self.epoch, "model": model.module.state_dict(), "optimizer": optimizer.state_dict()}
+            else:
+                state = {"epoch": self.epoch, "model": model.state_dict(), "optimizer": optimizer.state_dict()}
 
-    if opt.resume_best:
-        loss_list = list(map(lambda x: float(os.path.basename(x).split('_')[4][:-4]), checkpoint_list))
-        best_loss_idx = loss_list.index(min(loss_list))
-        checkpoint_path = checkpoint_list[best_loss_idx]
-    elif opt.epoch_num > 0:
-        checkpoint_path = checkpoint_list[opt.epoch_num - 1]
-    else:
-        # default load the last checkpoint
-        checkpoint_path = checkpoint_list[len(checkpoint_list) - 1]
-
-    if os.path.isfile(checkpoint_path):
-        print("=> loading checkpoint '{}'".format(checkpoint_path))
-        checkpoint = torch.load(checkpoint_path)
-        # print(checkpoint.keys())
-        n_epoch = checkpoint['epoch']
-        model.load_state_dict(checkpoint['model'])
-        if optimizer is not None:
-            optimizer.load_state_dict(checkpoint['optimizer'])
-        print("=> loaded checkpoint '{}' (epoch {})"
-                .format(checkpoint_path, n_epoch))
-    else:
-        print("=> no checkpoint found at '{}'".format(checkpoint_path))
-
-    print("Using epoch_num:", n_epoch)
-    
-    opt.checkpoint_dir = checkpoint_dir
-    print(model)
-    if opt.model == 'wganvgg' or 'wganvgg_rev':
-        return n_epoch+1, model.generator, optimizer
-    else : 
-        return n_epoch + 1, model, optimizer
-
+            torch.save(state, checkpoint_path)
+            print("Checkpoint saved to {}".format(checkpoint_path))
+        else : 
+            pass

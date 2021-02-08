@@ -97,6 +97,9 @@ parser.add_argument('--mA_full', '-f', type=str, default='level3', choices = ['l
 parser.add_argument('--mA_low', '-l',type=str, default='level5', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify low mA level 1,2,3,4,5,6 of phantom dataset')
 
+#model common
+parser.add_argument('--bn', default=False, action='store_true', help='batch normalization')
+
 #edsr
 parser.add_argument('--res_scale', type=float, default=1,
                     help='residual scaling')
@@ -104,6 +107,10 @@ parser.add_argument('--n_resblocks', type=int, default=16,
                     help='# resblocks for edsr')
 
 #wganvgg
+parser.add_argument('--lambda_gp', type=float, default= 10, 
+                    help='lambda_gp for wgan discriminator loss')
+parser.add_argument('--wgan_loss', default=False, action='store_true',
+                    help='include wgan_loss to generator or not')
 parser.add_argument('--n_d_train', type=float, default=4,
                     help='num of discriminator training for each generator training')
 parser.add_argument('--vgg_weight', type=float, default=1,
@@ -120,6 +127,7 @@ parser.add_argument('--style_stage', type=int, default=4, choices=[1,2,3,4,5,6],
                     help='stage for feature which is extracted from generator to domain classifier input')
 parser.add_argument('--content_randomization', default=False, action='store_true')
 parser.add_argument('--sagnet', default=False, action='store_true')
+
 
 parser.add_argument('--test_every', type=int, default=1000,
                     help='do test per every N batches')
@@ -155,17 +163,6 @@ parser.add_argument('--n_epochs', type=int, default=200)
 parser.add_argument('--weight_decay', type=float, default= 0.001)
 parser.add_argument('--weight_decay_dc', type=float, default= 0.1)
 
-
-#Unet
-parser.add_argument('--bilinear', type=str, default='bilinear', 
-                    help='up convolution type (bilinear or transposed2d)')
-
-#WGAN
-parser.add_argument('--lambda_gp', type=float, default= 10, 
-                    help='lambda_gp for wgan discriminator loss')
-
-parser.add_argument('--wgan_loss', default=False, action='store_true',
-                    help='include wgan_loss to generator or not')
 
 
 

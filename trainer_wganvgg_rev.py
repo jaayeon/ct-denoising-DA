@@ -10,10 +10,9 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR, MultiStepLR
 from torch.utils.data import DataLoader
 
 from models import set_model
-from utils.saver import load_model, save_checkpoint, save_config
+from utils.saver import Record
+from utils.loader import load_model
 from utils.helper import set_gpu, set_checkpoint_dir
-from utils.record import Record
-from collections import OrderedDict
 
 def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
@@ -41,14 +40,9 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     if opt.resume:
         #not possible
         opt.start_epoch, net, optimizer_g = load_model(opt, net, optimizer=optimizer_g)
+        raise NotImplementedError("can't load optimizer, you have to save all different optimizers")
     else:
         set_checkpoint_dir(opt)
-
-    if not os.path.exists(opt.checkpoint_dir):
-        os.makedirs(opt.checkpoint_dir)
-
-    log_file = os.path.join(opt.checkpoint_dir, opt.model + "_log.csv")
-    opt_file = os.path.join(opt.checkpoint_dir, opt.model + "_opt.txt")
     
     if opt.multi_gpu:
         net.generator = nn.DataParallel(net.generator)
@@ -60,22 +54,19 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     scheduler_d = ReduceLROnPlateau(optimizer_d, factor=0.5, patience=5, mode='min')
     scheduler_dc = ReduceLROnPlateau(optimizer_dc, factor=0.5, patience=5, mode='min')
     scheduler_rev = ReduceLROnPlateau(optimizer_rev, factor=0.5, patience=5, mode='min')
-    # scheduler_rev = ReduceLROnPlateau(optimizer_rev, factor=0.5, patience=5, mode='min')
     # scheduler = StepLR(optimizer_g, step_size=50, gamma=0.5)
 
     # Create log file when training start
     if opt.start_epoch == 1:
-        record = Record(opt, log_file=log_file, train_length=len(src_t_loader), valid_length=len(src_v_loader))
-        save_config(opt)
+        keys=['gloss', 'advloss', 'lloss', 'ploss', 'revloss', 'dcloss', 'dloss', 'src_psnr', 'nsrc_psnr', 'trg_psnr', 'ntrg_psnr']
+        record = Record(opt, train_length=len(src_t_loader), valid_length=len(src_v_loader), keys=keys)
 
     mse_criterion = nn.MSELoss()
-    
     if opt.use_cuda:
         mse_criterion = mse_criterion.to(opt.device)
 
     print('train_dir : {}\ntest_dir : {}\nimg_dir : {}\ngt_img_dir : {}'.format(opt.train_dir, opt.test_dir, opt.img_dir, opt.gt_img_dir))
 
-    current_best_psnr = 0.0
     for epoch in range(opt.start_epoch, opt.n_epochs):
         opt.epoch_num = epoch
 
@@ -119,7 +110,6 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             optimizer_g.zero_grad()
             optimizer_rev.zero_grad()
             net.generator.zero_grad()
-            # g_loss, px_loss, p_loss, fg_loss= net.g_loss(src_img, src_lbl, perceptual=True, return_p=True, pixel_wise=True, adv=True)
             g_loss, adv_loss, l_loss, p_loss= net.g_loss(src_img, src_lbl, perceptual=True, pixel_wise=True, return_losses=True)
             rev_loss = net.rev_loss(src_img)
             g_loss.backward()
@@ -160,7 +150,6 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
             d_loss, gp_loss = net.d_loss(src_img,src_lbl,gp=True,return_losses=True)
             dc_loss, dcgp_loss = net.dc_loss(src_img, src_lbl, trg_img, gp=True, return_losses=True)
-            # g_loss, px_loss, p_loss, fg_loss = net.g_loss(src_img,src_lbl,perceptual=True,return_p=True,pixel_wise=True)
             g_loss, adv_loss, l_loss, p_loss = net.g_loss(src_img,src_lbl,perceptual=True, pixel_wise=True, return_losses=True)
             rev_loss = net.rev_loss(src_img)
 
@@ -181,15 +170,11 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             record.update_status(status, mode='valid')
             record.print_buffer(mode='valid')
 
-        record.print_average(mode='valid')
-        current_psnr = record.valid[9]
-        if current_best_psnr < current_psnr: #trg_psnr
-            save_checkpoint(opt, net, optimizer_g, epoch, current_psnr)
-            current_best_psnr = current_psnr
-
         scheduler_g.step(mse_loss)
         scheduler_d.step(mse_loss)
         scheduler_dc.step(mse_loss)
         scheduler_rev.step(mse_loss)
 
-        record.write_log(epoch)
+        record.print_average(mode='valid')
+        record.save_checkpoint(net, optimizer_g, save_criterion='trg_psnr')
+        record.write_log()

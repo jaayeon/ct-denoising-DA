@@ -9,7 +9,7 @@ import torch.nn as nn
 
 import data.make_patches as mp
 from data.make_patches import pad_tensor, unpad_tensor
-from utils.saver import select_checkpoint_dir, load_model
+from utils.loader import select_checkpoint_dir, load_model
 from utils.metric import calc_metrics, forward_ensemble
 from options import args
 

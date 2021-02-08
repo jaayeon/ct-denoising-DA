@@ -83,15 +83,20 @@ class WGAN_VGG_generator(nn.Module):
     def style_params(self):
         params=[]
         layers=[self.inc, self.down1, self.down2, self.down3, self.up1, self.up2, self.up3, self.outc]
-        for i, layer in enumerate(layers):
-            if i <= self.style_stage and self.sagnet and self.dc_input == 'feature':
-                for m in layer.modules():
-                    if isinstance(m, nn.BatchNorm2d):
-                        params += [p for p in m.parameters()]
-            elif i <= self.style_stage and self.dc_input == 'feature':
+        if self.dc_input == 'feature':
+            for i, layer in enumerate(layers):
+                if i <= self.style_stage and self.sagnet:
+                    for m in layer.modules():
+                        if isinstance(m, nn.BatchNorm2d):
+                            params += [p for p in m.parameters()]
+                elif i <= self.style_stage: 
+                    params += [p for p in layer.parameters()]
+                else : 
+                    pass
+        else : #all layers
+            for i, layer in enumerate(layers):
                 params += [p for p in layer.parameters()]
-            else : 
-                params += [p for p in layer.parameters()]
+
         return params
             
 
@@ -138,7 +143,6 @@ class WGAN_VGG_discriminator(nn.Module):
     def __init__(self, input_size, input_channels):
         super(WGAN_VGG_discriminator, self).__init__()
         def conv_output_size(input_size, kernel_size_list, stride_list):
-            # n = (input_size - kernel_size_list[0]) // stride_list[0] + 1
             n=input_size
             for k, s in zip(kernel_size_list, stride_list):
                 # n = (n - k) // s + 1
@@ -153,12 +157,12 @@ class WGAN_VGG_discriminator(nn.Module):
 
         layers = []
         # ch_stride_set = [(input_channels,64,1),(64,64,2),(64,128,1),(128,128,2),(128,256,1),(256,256,2)]
-        ch_stride_set = [(input_channels,64,1),(64,64,1),(64,128,1),(128,128,1),(128,256,1),(256,256,1)]
+        ch_stride_set = [(input_channels,64,1),(64,128,2),(128,256,1)]
         for ch_in, ch_out, stride in ch_stride_set:
             add_block(layers, ch_in, ch_out, stride)
 
         # self.output_size = conv_output_size(input_size, [3]*6, [1,2]*3)
-        self.output_size = conv_output_size(input_size, [3]*6, [1]*6)
+        self.output_size = conv_output_size(input_size, [3]*3, [1,2,1])
         self.net = nn.Sequential(*layers)
         self.fc1 = nn.Linear(256*self.output_size*self.output_size, 1024)
         self.fc2 = nn.Linear(1024, 1)
@@ -195,24 +199,26 @@ class WGAN_VGG(nn.Module):
     def __init__(self, opt):
         input_size = opt.patch_size
         super(WGAN_VGG, self).__init__()
+        self.dc_input = opt.dc_input
+        self.change_contents = opt.content_randomization
+
         self.generator = WGAN_VGG_generator(opt, sagnet=opt.sagnet)
         self.discriminator = WGAN_VGG_discriminator(input_size, opt.n_channels)
-        if opt.dc_input =='concat' or opt.dc_input == 'concat2':
+        if self.dc_input =='concat' or self.dc_input == 'concat2':
             self.dc_channel = 2*opt.n_channels
-        elif opt.dc_input == 'feature':
+        elif self.dc_input == 'feature':
             self.dc_channel = 64*2**(opt.style_stage if opt.style_stage<4 else 6-opt.style_stage) #128 256 512 256 128 64
             input_size = (opt.patch_size//8)*2**(opt.style_stage-3 if opt.style_stage>3 else 3-opt.style_stage) #40 20 10 20 40 80 
         else :
             self.dc_channel = opt.n_channels
         self.domain_discriminator = WGAN_VGG_discriminator(input_size, self.dc_channel)
-
         self.feature_extractor = WGAN_VGG_FeatureExtractor()
+
         self.p_criterion = nn.L1Loss() #perceptual loss
         self.l_criterion = nn.L1Loss() #l1 pixelwise loss
         self.vgg_weight = opt.vgg_weight #perceptual loss weight
         self.rev_weight = opt.rev_weight #reversal gradient loss weight
         self.l_weight = opt.l_weight #l1 pixelwise loss weight
-        self.dc_input = opt.dc_input
 
     def d_loss(self, x, y, gp=True, return_losses=False):
         self.generator.eval()
@@ -240,8 +246,12 @@ class WGAN_VGG(nn.Module):
 
         # d_src = self.domain_discriminator(src_out.detach())
         # d_trg = self.domain_discriminator(trg_out.detach())
-        src_out, trg_out = self.content_randomization(self.src_out, self.trg_out)
-        src_feature, trg_feature = self.content_randomization(self.src_feature, self.trg_feature)
+        if self.change_contents:
+            src_out, trg_out = self.content_randomization(self.src_out, self.trg_out)
+            src_feature, trg_feature = self.content_randomization(self.src_feature, self.trg_feature)
+        else : 
+            src_out, trg_out = self.src_out, self.trg_out
+            src_feature, trg_feature = self.src_feature, self.trg_feature
 
         if dc_input == 'src_out':
             # (source'-source)
@@ -327,7 +337,6 @@ class WGAN_VGG(nn.Module):
         else : 
             px_loss = torch.from_numpy(np.array(0.0))
 
-        # return (loss, px_loss, p_loss, fg_loss) if (return_p or adv) else loss
         return (loss, adv_loss, px_loss, p_loss) if return_losses else loss
 
     def rev_loss(self, x):
@@ -356,7 +365,6 @@ class WGAN_VGG(nn.Module):
         return loss
 
     def gp(self, y, fake, lambda_=10, net='discriminator'):
-        dc_input = self.dc_input
         y, fake = self.align_size(y, fake)
         assert y.size() == fake.size()
         a = torch.cuda.FloatTensor(np.random.random((y.size(0), 1, 1, 1)))

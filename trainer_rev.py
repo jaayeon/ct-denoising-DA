@@ -6,7 +6,8 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
 from utils.helper import set_checkpoint_dir, set_gpu
-from utils.saver import load_model, save_checkpoint, save_config
+from utils.loader import load_model
+from utils.saver import Record
 from models import set_model, set_model_D
 
 def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
@@ -14,22 +15,21 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     print('Initialize networks for training')
 
     net = set_model(opt)
-    net_D = net.discriminator()
-    # net_D = set_model_D(opt)
+
     print(net)
-    print(net_D)
+    print(net.discriminator)
     
     print("Setting Optimizer")
     if opt.optimizer == 'adam':
         optimizer = optim.Adam(net.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=0)
-        optimizer_D = optim.Adam(net_D.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=0)
+        optimizer_d = optim.Adam(net.discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=0)
         print("===> Use Adam optimizer")
 
     if opt.resume:
         print("Choose Model checkpoint")
         opt.start_epoch, net, optimizer = load_model(opt, net, optimizer=optimizer)
         print("Choose Discriminator checkpoint")
-        _, net_D, optimizer_D = load_model(opt, net_D, optimizer=optimizer_D)
+        _, net.discriminator, optimizer_d = load_model(opt, net.discriminator, optimizer=optimizer_d)
     else : 
         set_checkpoint_dir(opt)
 
@@ -43,10 +43,10 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
     if opt.multi_gpu:
         net = nn.DataParallel(net)
-        net_D = nn.DataParallel(net_D)
+        net.discriminator = nn.DataParallel(net.discriminator)
 
     scheduler = ReduceLROnPlateau(optimizer, factor=0.9, patience=5, mode='min')
-    scheduler_D = ReduceLROnPlateau(optimizer_D, factor=0.9, patience=5, mode='min')
+    scheduler_D = ReduceLROnPlateau(optimizer_d, factor=0.9, patience=5, mode='min')
 
     # Setting loss function
     if opt.loss == 'l1':
@@ -75,7 +75,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
         for param_group in optimizer.param_groups:
             print('optim lr : ', param_group['lr'])
-        for param_group in optimizer_D.param_groups:
+        for param_group in optimizer_d.param_groups:
             print("optim D lr : ", param_group['lr'])
 
         train_psnr = 0.0
@@ -92,9 +92,9 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_img, trg_lbl = trg_img.to(opt.device), trg_lbl.to(opt.device)
 
             net.train()
-            net_D.train()
+            net.discriminator.train()
             optimizer.zero_grad()
-            optimizer_D.zero_grad()
+            optimizer_d.zero_grad()
 
             # M with source Denoising
             src_out = net(src_img, src_lbl)
@@ -105,31 +105,31 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             trg_out = net(trg_img, trg_lbl)
             loss_trg_m = net.loss
 
-            for param in net_D.parameters():
+            for param in net.discriminator.parameters():
                 param.requires_grad=False
 
-            trg_outD = net_D(trg_out-trg_img, 0.5)
-            loss_trg_D_fake = net_D.loss  
+            trg_outD = net.discriminator(trg_out-trg_img, 0.5)
+            loss_trg_D_fake = net.discriminator.loss  
 
             # loss_trg_M = opt.lambda_adv_target * loss_trg_D_fake + loss_trg_m    #target label exists
             loss_trg_M = opt.lambda_adv_target * loss_trg_D_fake + 0
             loss_trg_M.backward() #update M with adversarial loss 
 
             # D with source, target classification
-            for param in net_D.parameters():
+            for param in net.discriminator.parameters():
                 param.requires_grad = True
 
             src_out, trg_out = src_out.detach(), trg_out.detach()
-            src_outD = net_D(src_out-src_img,0)
-            loss_src_D = net_D.loss / 2
+            src_outD = net.discriminator(src_out-src_img,0)
+            loss_src_D = net.discriminator.loss / 2
             loss_src_D.backward() #update D 
 
-            trg_outD = net_D(trg_out-trg_img, 1)
-            loss_trg_D_real = net_D.loss / 2
+            trg_outD = net.discriminator(trg_out-trg_img, 1)
+            loss_trg_D_real = net.discriminator.loss / 2
             loss_trg_D_real.backward() #update D
 
             optimizer.step()
-            optimizer_D.step()
+            optimizer_d.step()
 
             train_loss_D += loss_src_D
             train_loss_D += loss_trg_D_real
@@ -158,7 +158,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
             with torch.no_grad():
                 net.eval()
-                net_D.eval()
+                net.discriminator.eval()
 
                 src_out = net(src_img, src_lbl)
                 loss_src_M = net.loss
@@ -166,14 +166,14 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_out = net(trg_img, trg_lbl)
                 loss_trg_m = net.loss
 
-                trg_outD = net_D(trg_out-trg_img, 0.5)
-                loss_trg_D_fake = net_D.loss  
+                trg_outD = net.discriminator(trg_out-trg_img, 0.5)
+                loss_trg_D_fake = net.discriminator.loss  
 
-                src_outD = net_D(src_out-src_img,0)
-                loss_src_D = net_D.loss / 2
+                src_outD = net.discriminator(src_out-src_img,0)
+                loss_src_D = net.discriminator.loss / 2
 
-                trg_outD = net_D(trg_out-trg_img, 1)
-                loss_trg_D_real = net_D.loss / 2
+                trg_outD = net.discriminator(trg_out-trg_img, 1)
+                loss_trg_D_real = net.discriminator.loss / 2
 
                 valid_loss += loss_src_M
                 valid_loss_D += loss_src_D
@@ -211,7 +211,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
         if current_best_psnr < valid_psnr : 
             save_checkpoint(opt, net, optimizer, epoch, valid_loss)
-            save_checkpoint(opt, net_D, optimizer_D, epoch, valid_loss_D, 'D')
+            save_checkpoint(opt, net.discriminator, optimizer_d, epoch, valid_loss_D, 'D')
             current_best_psnr = valid_psnr
 
 
