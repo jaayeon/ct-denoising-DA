@@ -111,7 +111,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             optimizer_rev.zero_grad()
             net.generator.zero_grad()
             g_loss, adv_loss, l_loss, p_loss= net.g_loss(src_img, src_lbl, perceptual=True, pixel_wise=True, return_losses=True)
-            rev_loss = net.rev_loss(src_img)
+            rev_loss = net.rev_loss(src_img, src_lbl)
             g_loss.backward()
             rev_loss.backward()
             optimizer_g.step()
@@ -151,7 +151,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             d_loss, gp_loss = net.d_loss(src_img,src_lbl,gp=True,return_losses=True)
             dc_loss, dcgp_loss = net.dc_loss(src_img, src_lbl, trg_img, gp=True, return_losses=True)
             g_loss, adv_loss, l_loss, p_loss = net.g_loss(src_img,src_lbl,perceptual=True, pixel_wise=True, return_losses=True)
-            rev_loss = net.rev_loss(src_img)
+            rev_loss = net.rev_loss(src_img, src_lbl)
 
             #calculate psnr
             src_out = net.src_out
