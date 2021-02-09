@@ -135,7 +135,7 @@ class WGAN_VGG_rev(nn.Module):
         if self.dc_input == 'img':
             rev_loss = -self.rev_weight * torch.mean(self.domain_discriminator(self.src_out))
         elif self.dc_input == 'noise':
-            rev_loss = -self.rev_weight * torch.mean(self.domain_discriminator(self.src_out-src_lbl))
+            rev_loss = -self.rev_weight * torch.mean(self.domain_discriminator(self.src_out-src))
         elif self.dc_input == 'feature':
             rev_loss = -self.rev_weight * torch.mean(self.domain_discriminator(self.src_feature))
         elif self.dc_input == 'c_img':

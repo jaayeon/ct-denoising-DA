@@ -91,32 +91,35 @@ class Networks_rev(nn.Module):
         return loss
 
 
-    def g_loss(self, x, y, perceptual=True, rev=True, return_losses=True):
+    def g_loss(self, src, src_lbl, perceptual=True, rev=True, return_losses=True):
         self.denoiser.train()
         self.domain_discriminator.eval()
     
-        self.src_out, self.src_feature  = self.denoiser(x)
-        l_loss = self.l_weight * self.l_criterion(self.src_out, y)
+        self.src_out, self.src_feature  = self.denoiser(src)
+        l_loss = self.l_weight * self.l_criterion(self.src_out, src_lbl)
         if perceptual:
-            p_loss = self.vgg_weight * self.p_loss(self.src_out, y)
+            p_loss = self.vgg_weight * self.p_loss(self.src_out, src_lbl)
         else:
             p_loss = torch.from_numpy(np.array(0.0))
         
-        if rev and self.dc_input == 'img':
-            rev_loss = -self.rev_weight * self.dc_criterion(self.domain_discriminator(self.src_out), 1)
-        elif rev and self.dc_input == 'noise':
-            rev_loss = -self.rev_weight * self.dc_criterion(self.domain_discriminator(self.src_out-src_lbl), 1)
-        elif rev and self.dc_input == 'feature':
-            rev_loss = -self.rev_weight * self.dc_criterion(self.domain_discriminator(self.src_feature), 1)
-        elif rev and self.dc_input == 'c_img':
-            rev_loss = -self.rev_weight * self.dc_criterion(self.domain_discriminator(torch.cat((self.src_out, src_lbl), 1)), 1)
-        elif rev and self.dc_input == 'c_noise':
-            rev_loss = -self.rev_weight * self.dc_criterion(self.domain_discriminator(torch.cat((self.src_out-src, src_lbl-src), 1)), 1)
-        elif rev and self.dc_input == 'c_feature':
-            raise NotImplementedError('you have to implement concat_feature')
+        if self.dc_input == 'img':
+            d_src = self.domain_discriminator(self.src_out)
+        elif self.dc_input == 'noise':
+            d_src = self.domain_discriminator(self.src_out-src)
+        elif self.dc_input == 'feature':
+            d_src = self.domain_discriminator(self.src_feature)
+        elif self.dc_input == 'c_img':
+            d_src = self.domain_discriminator(torch.cat((self.src_out, src_lbl), 1))
+        elif self.dc_input == 'c_noise':
+            d_src = self.domain_discriminator(torch.cat((self.src_out-src, src_lbl-src), 1))
+        else:
+            raise NotImplementedError('you have to implement dc_input {}'.format(self.dc_input))
+
+        if rev : 
+            src_class = self.get_target_tensor(d_src, True)
+            rev_loss = self.rev_weight * self.dc_criterion(d_src, src_class)
         else : 
             rev_loss = torch.from_numpy(np.array(0.0))
-
         loss = l_loss + p_loss + rev_loss
 
         return (loss, l_loss, p_loss, rev_loss) if return_losses else loss

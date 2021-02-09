@@ -75,7 +75,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             
             #denoiser
             optimizer.zero_grad()
-            net.generator.zero_grad()
+            net.denoiser.zero_grad()
             loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, src_lbl, perceptual=True, rev=True, return_losses=True)
             loss.backward()
             optimizer.step()
