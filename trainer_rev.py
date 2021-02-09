@@ -8,82 +8,56 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from utils.helper import set_checkpoint_dir, set_gpu
 from utils.loader import load_model
 from utils.saver import Record
-from models import set_model, set_model_D
+from models import set_model
 
 def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     opt= set_gpu(opt)
     print('Initialize networks for training')
-
     net = set_model(opt)
-
     print(net)
-    print(net.discriminator)
     
     print("Setting Optimizer")
     if opt.optimizer == 'adam':
-        optimizer = optim.Adam(net.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=0)
-        optimizer_d = optim.Adam(net.discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=0)
+        optimizer = optim.Adam(net.denoiser.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
+        optimizer_dc = optim.Adam(net.domain_discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
         print("===> Use Adam optimizer")
 
     if opt.resume:
         print("Choose Model checkpoint")
         opt.start_epoch, net, optimizer = load_model(opt, net, optimizer=optimizer)
-        print("Choose Discriminator checkpoint")
-        _, net.discriminator, optimizer_d = load_model(opt, net.discriminator, optimizer=optimizer_d)
     else : 
         set_checkpoint_dir(opt)
 
-    if not os.path.exists(opt.checkpoint_dir):
-        os.makedirs(opt.checkpoint_dir)
-    if not os.path.exists(opt.checkpoint_dir_D):
-        os.makedirs(opt.checkpoint_dir_D)
-
-    log_file = os.path.join(opt.checkpoint_dir, opt.model + "_log.csv")
-    opt_file = os.path.join(opt.checkpoint_dir, opt.model + "_opt.txt")
-
     if opt.multi_gpu:
-        net = nn.DataParallel(net)
-        net.discriminator = nn.DataParallel(net.discriminator)
+        net.denoiser = nn.DataParallel(net.denoiser)
+        net.domain_discriminator = nn.DataParallel(net.domain_discriminator)
 
-    scheduler = ReduceLROnPlateau(optimizer, factor=0.9, patience=5, mode='min')
-    scheduler_D = ReduceLROnPlateau(optimizer_d, factor=0.9, patience=5, mode='min')
-
-    # Setting loss function
-    if opt.loss == 'l1':
-        loss_criterion = nn.L1Loss()
-    elif opt.loss == 'l2':
-        loss_criterion = nn.MSELoss()
-    else:
-        raise ValueError("Please specify correct loss function")
+    scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5, mode='min')
+    scheduler_dc = ReduceLROnPlateau(optimizer_dc, factor=0.5, patience=5, mode='min')
 
     if opt.start_epoch == 1:
-        with open(log_file, mode='w') as f:
-            f.write("epoch,train_loss,valid_loss,train_loss_D,valid_loss_D,train_psnr,valid_psnr\n")
-        save_config(opt)
+        keys = ['loss', 'lloss', 'ploss', 'revloss', 'dcloss', 'src_psnr', 'nsrc_psnr', 'trg_psnr', 'ntrg_psnr']
+        record = Record(opt, train_length=len(src_t_loader), valid_length=len(src_v_loader), keys=keys)
 
     mse_criterion = nn.MSELoss()
-
     if opt.use_cuda:
         mse_criterion = mse_criterion.to(opt.device)
 
     print('train_dir : {}\ntest_dir : {}\nimg_dir : {}\ngt_img_dir : {}'.format(opt.train_dir, opt.test_dir, opt.img_dir, opt.gt_img_dir))
 
-    current_best_psnr = 0.0
-    loss = ['loss_src_M', 'loss_trg_m', 'loss_trg_D_fake', 'loss_src_D', 'loss_trg_D_real']
     for epoch in range(opt.start_epoch, opt.n_epochs):
         opt.epoch_num = epoch
 
         for param_group in optimizer.param_groups:
             print('optim lr : ', param_group['lr'])
-        for param_group in optimizer_d.param_groups:
+        for param_group in optimizer_dc.param_groups:
             print("optim D lr : ", param_group['lr'])
 
-        train_psnr = 0.0
-        train_loss = 0.0
-        train_loss_D = 0.0
-        start_train = time.time()
+        net.denoiser.train()
+        net.domain_discriminator.train()
+
         print("***Training***")
-        for iteration_t, batch in enumerate(zip(src_t_loader, trg_t_loader), 1):
+        for batch in zip(src_t_loader, trg_t_loader):
             src_img, src_lbl = batch[0][0], batch[0][1]
             trg_img, trg_lbl = batch[1][0], batch[1][1]
 
@@ -91,64 +65,43 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 src_img, src_lbl = src_img.to(opt.device), src_lbl.to(opt.device)
                 trg_img, trg_lbl = trg_img.to(opt.device), trg_lbl.to(opt.device)
 
-            net.train()
-            net.discriminator.train()
-            optimizer.zero_grad()
-            optimizer_d.zero_grad()
-
-            # M with source Denoising
-            src_out = net(src_img, src_lbl)
-            loss_src_M = net.loss
-            loss_src_M.backward() #update M
+            #domain classifier
+            optimizer_dc.zero_grad()
+            net.domain_discriminator.zero_grad()
+            for _ in range(opt.n_d_train):
+                dc_loss = net.dc_loss(src_img, src_lbl, trg_img)
+                dc_loss.backward()
+                optimizer_dc.step()
             
-            # M with target adversarial learning
-            trg_out = net(trg_img, trg_lbl)
-            loss_trg_m = net.loss
-
-            for param in net.discriminator.parameters():
-                param.requires_grad=False
-
-            trg_outD = net.discriminator(trg_out-trg_img, 0.5)
-            loss_trg_D_fake = net.discriminator.loss  
-
-            # loss_trg_M = opt.lambda_adv_target * loss_trg_D_fake + loss_trg_m    #target label exists
-            loss_trg_M = opt.lambda_adv_target * loss_trg_D_fake + 0
-            loss_trg_M.backward() #update M with adversarial loss 
-
-            # D with source, target classification
-            for param in net.discriminator.parameters():
-                param.requires_grad = True
-
-            src_out, trg_out = src_out.detach(), trg_out.detach()
-            src_outD = net.discriminator(src_out-src_img,0)
-            loss_src_D = net.discriminator.loss / 2
-            loss_src_D.backward() #update D 
-
-            trg_outD = net.discriminator(trg_out-trg_img, 1)
-            loss_trg_D_real = net.discriminator.loss / 2
-            loss_trg_D_real.backward() #update D
-
+            #denoiser
+            optimizer.zero_grad()
+            net.generator.zero_grad()
+            loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, src_lbl, perceptual=True, rev=True, return_losses=True)
+            loss.backward()
             optimizer.step()
-            optimizer_d.step()
 
-            train_loss_D += loss_src_D
-            train_loss_D += loss_trg_D_real
-            train_loss += loss_src_M
+            #calculate psnr
+            src_out = net.src_out
+            trg_out = net.trg_out
             mse_loss = mse_criterion(src_out, src_lbl)
-            psnr = 10* math.log10(1 / mse_loss.item())
-            train_psnr += psnr
+            spsnr = 10 * math.log10(1 / mse_loss.item())
+            nmse_loss = mse_criterion(src_img, src_lbl)
+            nspsnr = 10 * math.log10(1 / nmse_loss.item())
+            mse_loss = mse_criterion(trg_out, trg_lbl)
+            tpsnr = 10 * math.log10(1 / mse_loss.item())
+            nmse_loss = mse_criterion(trg_img, trg_lbl)
+            ntpsnr = 10 * math.log10(1 / nmse_loss.item())
 
-            print("%s %.2fs => Epoch[%d/%d](%d/%d): loss_src_M : %.5f loss_trg_m : %.5f loss_trg_D_fake : %.5f loss_src_D : %.5f loss_trg_D_real : %.5f PSNR : %.5f"%(
-                'Training', time.time()-start_train, epoch, opt.n_epochs, iteration_t, len(src_t_loader), loss_src_M, loss_trg_m, loss_trg_D_fake, loss_src_D, loss_trg_D_real, psnr))
-            # print("PSNR : %.5f avg_PSNR : %.5f avg_LOSS : %.5f avg_LOSS_D : %.5f"%(psnr, train_psnr/iteration_t, train_loss/iteration_t, train_loss_D/iteration_t))
-        
+            #update status
+            status = [loss.item(), l_loss.item(), p_loss.item(), rev_loss.item(), dc_loss.item(), spsnr, nspsnr, tpsnr, ntpsnr]
+            record.update_status(status, mode='train')
+            record.print_buffer(mode='train')
+        record.print_average(mode='train')   
 
-        valid_psnr = 0.0
-        valid_loss = 0.0
-        valid_loss_D = 0.0
-        start_valid = time.time()
+        net.denoiser.eval()
+        net.domain_discriminator.eval()
         print("***Validation***")
-        for iteration_v, batch in enumerate(zip(src_v_loader, trg_v_loader), 1):
+        for batch in zip(src_v_loader, trg_v_loader):
             src_img, src_lbl = batch[0][0], batch[0][1]
             trg_img, trg_lbl = batch[1][0], batch[1][1]
 
@@ -157,63 +110,32 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_img, trg_lbl = trg_img.to(opt.device), trg_lbl.to(opt.device)
 
             with torch.no_grad():
-                net.eval()
-                net.discriminator.eval()
+                dc_loss = net.dc_loss(src_img, src_lbl, trg_img)
+                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, src_lbl, perceptual=True, rev=True, return_losses=True)
 
-                src_out = net(src_img, src_lbl)
-                loss_src_M = net.loss
+            #calculate psnr
+            src_out = net.src_out
+            trg_out = net.trg_out
+            mse_loss = mse_criterion(src_out, src_lbl)
+            spsnr = 10 * math.log10(1 / mse_loss.item())
+            nmse_loss = mse_criterion(src_img, src_lbl)
+            nspsnr = 10 * math.log10(1 / nmse_loss.item())
+            mse_loss = mse_criterion(trg_out, trg_lbl)
+            tpsnr = 10 * math.log10(1 / mse_loss.item())
+            nmse_loss = mse_criterion(trg_img, trg_lbl)
+            ntpsnr = 10 * math.log10(1 / nmse_loss.item())
 
-                trg_out = net(trg_img, trg_lbl)
-                loss_trg_m = net.loss
-
-                trg_outD = net.discriminator(trg_out-trg_img, 0.5)
-                loss_trg_D_fake = net.discriminator.loss  
-
-                src_outD = net.discriminator(src_out-src_img,0)
-                loss_src_D = net.discriminator.loss / 2
-
-                trg_outD = net.discriminator(trg_out-trg_img, 1)
-                loss_trg_D_real = net.discriminator.loss / 2
-
-                valid_loss += loss_src_M
-                valid_loss_D += loss_src_D
-                valid_loss_D += loss_trg_D_real
-                mse_loss = mse_criterion(trg_out, trg_lbl)
-                nmse_loss = mse_criterion(trg_img, trg_lbl)
-                psnr = 10 * math.log10(1 / mse_loss.item())
-                npsnr = 10 * math.log10(1 / nmse_loss.item())
-                valid_psnr += psnr
-            print("%s %.2fs => Epoch[%d/%d](%d/%d): loss_src_M : %.5f loss_trg_m : %.5f loss_trg_D_fake : %.5f loss_src_D : %.5f loss_trg_D_real : %.5f"%(
-                'Validation', time.time()-start_valid, epoch, opt.n_epochs, iteration_v, len(src_v_loader), loss_src_M, loss_trg_m, loss_trg_D_fake, loss_src_D, loss_trg_D_real))
-            print("noise PSNR : %.5f PSNR : %.5f "%(npsnr, psnr))
+            #update status
+            status = [loss.item(), l_loss.item(), p_loss.item(), rev_loss.item(), dc_loss.item(), spsnr, nspsnr, tpsnr, ntpsnr]
+            record.update_status(status, mode='valid')
+            record.print_buffer(mode='valid')
         
+        scheduler.step(mse_loss)
+        scheduler_dc.step(mse_loss)
 
-        train_psnr = train_psnr/iteration_t
-        train_loss = train_loss/iteration_t
-        valid_psnr = valid_psnr/iteration_v
-        valid_loss = valid_loss/iteration_v
-        train_loss_D = train_loss_D/iteration_t
-        valid_loss_D = valid_loss_D/iteration_v
-
-        scheduler.step(valid_loss)
-        scheduler_D.step(valid_loss_D)
-
-        with open(log_file, mode='a') as f:
-            f.write("%d,%08f,%08f,%08f,%08f,%08f,%08f"%(
-                epoch,
-                train_loss,
-                valid_loss,
-                train_loss_D,
-                valid_loss_D,
-                train_psnr,
-                valid_psnr
-            ))
-
-        if current_best_psnr < valid_psnr : 
-            save_checkpoint(opt, net, optimizer, epoch, valid_loss)
-            save_checkpoint(opt, net.discriminator, optimizer_d, epoch, valid_loss_D, 'D')
-            current_best_psnr = valid_psnr
-
+        record.print_average(mode='valid')
+        record.save_checkpoint(net, optimizer, save_criterion='trg_psnr')
+        record.write_log()
 
 
 

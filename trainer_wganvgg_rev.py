@@ -15,10 +15,8 @@ from utils.loader import load_model
 from utils.helper import set_gpu, set_checkpoint_dir
 
 def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
-
     # check gpu setting with opt arguments
     opt = set_gpu(opt)
-    
     print('Initialize networks for training')
     net = set_model(opt)
     print(net)
@@ -92,7 +90,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 src_img, src_lbl = src_img.to(opt.device), src_lbl.to(opt.device)
                 trg_img, trg_lbl = trg_img.to(opt.device), trg_lbl.to(opt.device)
 
-            #discriminator
+            #discriminator & domain classifier
             optimizer_d.zero_grad()
             optimizer_dc.zero_grad()
             net.discriminator.zero_grad()

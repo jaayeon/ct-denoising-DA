@@ -9,30 +9,40 @@ def make_model(opt):
 class DnCNN(nn.Module):
     def __init__(self, opt, num_of_layers = 17):
         super(DnCNN,self).__init__()
+        self.rev = False
         kernel_size = 3
         padding = 1
-        #default features of dncnn is 64
         features = 64
-        # num_of_layers = opt.n_conv
-        layers = []
-
+        before_layers = []
+        after_layers = []
         n_channels = opt.n_channels
-        self.Loss = nn.L1Loss()
 
-        layers.append(nn.Conv2d(in_channels=n_channels, out_channels = features, kernel_size = kernel_size, padding = padding, bias = False))
-        layers.append(nn.ReLU(inplace=True))
+        before_layers.append(nn.Conv2d(in_channels=n_channels, out_channels = features, kernel_size = kernel_size, padding = padding, bias = False))
+        before_layers.append(nn.ReLU(inplace=True))
 
-        for _ in range(num_of_layers-2):
-            layers.append(nn.Conv2d(in_channels=features, out_channels=features, kernel_size=kernel_size, padding=padding, bias=False))
-            layers.append(nn.BatchNorm2d(features))
-            layers.append(nn.ReLU(inplace=True))
-        layers.append(nn.Conv2d(in_channels=features, out_channels=n_channels, kernel_size=kernel_size, padding=padding, bias=False))
-        self.dncnn = nn.Sequential(*layers)
-
-    def forward(self, x, lbl):
+        style_stage = int((num_of_layers-2)*opt.style_stage/6)
+        for _ in range(style_stage):
+            before_layers.append(nn.Conv2d(in_channels=features, out_channels=features, kernel_size=kernel_size, padding=padding, bias=False))
+            before_layers.append(nn.BatchNorm2d(features))
+            before_layers.append(nn.ReLU(inplace=True))
         
-        y = x
-        out = self.dncnn(x)
-        self.loss = self.Loss(y-out, lbl)
+        for _ in range(num_of_layers-style_stage):
+            after_layers.append(nn.Conv2d(in_channels=features, out_channels=features, kernel_size=kernel_size, padding=padding, bias=False))
+            after_layers.append(nn.BatchNorm2d(features))
+            after_layers.append(nn.ReLU(inplace=True))
+        after_layers.append(nn.Conv2d(in_channels=features, out_channels=n_channels, kernel_size=kernel_size, padding=padding, bias=False))
+        
+        self.body1 = nn.Sequential(*before_layers)
+        self.body2 = nn.Sequential(*after_layers)
 
-        return y - out
+    def forward(self, x):
+        
+        global_res = x
+        feature=self.body1(x)
+        out = self.body2(feature)
+
+        out = global_res-out
+        if self.rev : 
+            return out, feature
+        else : 
+            return out

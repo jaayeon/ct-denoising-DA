@@ -12,7 +12,7 @@ test_result_dir = os.path.join(data_dir, 'test_result_DA')
 parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test'])
-parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr', 'wganvgg', 'wganvgg_rev'])
+parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr'])
 parser.add_argument('--way', type=str, default='wganrev', choices=['base', 'rev', 'wgan', 'wganrev'])
 
 
@@ -189,10 +189,5 @@ else:
 
 if args.train_datasets is None:
     args.train_datasets = [args.source]
-
-if args.way == 'wgan':
-    args.model = 'wganvgg'
-elif args.way == 'wganrev':
-    args.model = 'wganvgg_rev'
 
 torch.manual_seed(args.seed)
