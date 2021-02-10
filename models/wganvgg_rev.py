@@ -15,10 +15,12 @@ class WGAN_VGG_rev(nn.Module):
     def __init__(self, opt):
         input_size = opt.patch_size
         super(WGAN_VGG_rev, self).__init__()
+        self.rev = True
         self.dc_input = opt.dc_input
         self.change_contents = opt.content_randomization
 
         self.generator = get_base_model(opt)
+        self.generator.rev = self.rev
         self.discriminator = Discriminator(input_size, opt.n_channels)
         if self.dc_input =='c_img' or self.dc_input == 'c_noise':
             self.dc_channel = 2*opt.n_channels

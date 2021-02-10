@@ -116,8 +116,7 @@ def load_model(opt, model, optimizer=None):
     
     opt.checkpoint_dir = checkpoint_dir
     print(model)
-    if opt.model == 'wganvgg' or 'wganvgg_rev':
+    if opt.way == 'wgan' or opt.way == 'wganrev':
         return n_epoch+1, model.generator, optimizer
-    else : 
-        return n_epoch+1, model, optimizer
-
+    elif opt.way == 'rev' or opt.way == 'base':
+        return n_epoch+1, model.denoiser, optimizer
