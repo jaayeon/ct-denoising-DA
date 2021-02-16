@@ -19,7 +19,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     print("Setting Optimizer")
     if opt.optimizer == 'adam':
         optimizer = optim.Adam(net.denoiser.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
-        optimizer_dc = optim.Adam(net.domain_discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
+        optimizer_dc = optim.Adam(net.domain_discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay_dc)
         print("===> Use Adam optimizer")
 
     if opt.resume:
@@ -76,7 +76,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             #denoiser
             optimizer.zero_grad()
             net.denoiser.zero_grad()
-            loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, src_lbl, perceptual=True, rev=True, return_losses=True)
+            loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, src_lbl, perceptual=True, return_losses=True)
             loss.backward()
             optimizer.step()
 
@@ -111,7 +111,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
             with torch.no_grad():
                 dc_loss = net.dc_loss(src_img, src_lbl, trg_img)
-                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, src_lbl, perceptual=True, rev=True, return_losses=True)
+                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, src_lbl, perceptual=True,return_losses=True)
 
             #calculate psnr
             src_out = net.src_out

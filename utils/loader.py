@@ -6,6 +6,7 @@ import torch
 def select_checkpoint_dir(opt):
     checkpoint_dir = opt.checkpoint_dir
     dirs = os.listdir(checkpoint_dir)
+    dirs = sorted(dirs)
 
     for i, d in enumerate(dirs, 0):
         print("(%d) %s" % (i, d))

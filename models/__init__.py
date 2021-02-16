@@ -59,7 +59,7 @@ class FeatureExtractor(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, input_size, input_channels):
+    def __init__(self, input_size, input_channels, class_num=1):
         super(Discriminator, self).__init__()
         def conv_output_size(input_size, kernel_size_list, stride_list):
             n=input_size
@@ -84,7 +84,7 @@ class Discriminator(nn.Module):
         self.output_size = conv_output_size(input_size, [3]*3, [1,2,1])
         self.net = nn.Sequential(*layers)
         self.fc1 = nn.Linear(256*self.output_size*self.output_size, 1024)
-        self.fc2 = nn.Linear(1024, 1)
+        self.fc2 = nn.Linear(1024, class_num)
         self.lrelu = nn.LeakyReLU()
 
     def forward(self, x):

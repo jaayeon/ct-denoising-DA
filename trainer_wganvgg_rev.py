@@ -32,7 +32,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         optimizer_g = optim.RMSprop(net.generator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay, centered=False)
         optimizer_d = optim.RMSprop(net.discriminator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay, centered=False)
         optimizer_dc = optim.RMSprop(net.domain_discriminator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay_dc, centered=False)
-        optimizer_rev = optim.RMSprop(net.generator.style_params(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay_dc, centered=False)
+        optimizer_rev = optim.RMSprop(net.generator.style_params(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay, centered=False)
         print("===> Use RMSprop optimizer")
     
     if opt.resume:

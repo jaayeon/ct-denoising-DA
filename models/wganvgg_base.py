@@ -66,7 +66,7 @@ class WGAN_VGG(nn.Module):
         d_fake = self.discriminator(self.fake) 
         adv_loss = -torch.mean(d_fake) 
         if perceptual:
-            p_loss = self.vgg_weight *self.p_loss(x, y)
+            p_loss = self.vgg_weight *self.p_loss(self.fake, y)
             loss = adv_loss + p_loss
         else:
             p_loss = torch.from_numpy(np.array(0.0))
