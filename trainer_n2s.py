@@ -15,7 +15,7 @@ from models import set_model
 from utils.saver import load_model, save_checkpoint, save_config
 from utils.helper import set_gpu, set_checkpoint_dir
 from torch.nn import MSELoss
-from mask import Masker
+from data.mask import Masker
 
 def run_train(opt, training_dataloader, valid_dataloader):
 
