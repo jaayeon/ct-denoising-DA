@@ -20,7 +20,7 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
     # check gpu setting with opt arguments
     opt = set_gpu(opt)
     
-    print('Initialize networks for training')
+    print('Initialize networks for training_noisy-as-clean')
     net = set_model(opt)
     print(net)
 
@@ -34,17 +34,15 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
         print("===> Use Adam optimizer")
     
     if opt.resume:
-        #not possible
         opt.start_epoch, net, optimizer = load_model(opt, net, optimizer=optimizer)
-        # _, net_D, optimizer_d = load_model(opt, net_D, optimizer_g=optimizer_d)
     else:
         set_checkpoint_dir(opt)
 
     if not os.path.exists(opt.checkpoint_dir):
         os.makedirs(opt.checkpoint_dir)
 
-    log_file = os.path.join(opt.checkpoint_dir, opt.model + "_log.csv")
-    opt_file = os.path.join(opt.checkpoint_dir, opt.model + "_opt.txt")
+    log_file = os.path.join(opt.checkpoint_dir, opt.way + "_log.csv")
+    opt_file = os.path.join(opt.checkpoint_dir, opt.way + "_opt.txt")
     
     if opt.multi_gpu:
         net = nn.DataParallel(net)
@@ -56,11 +54,11 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
     # Create log file when training start
     if opt.start_epoch == 1:
         with open(log_file, mode='w') as f:
-            f.write("epoch, gloss_t, pxloss_t, ploss_t, fgloss_t, dloss_t, gploss_t, advloss_t, dmgploss_t, psnr_t, gloss_v, pxloss_v, ploss_v, fgloss_v, dloss_v, gploss_v, advloss_v, dmgploss_v, psnr_v\n")
+            f.write("epoch, train_loss, train_psnr, valid_loss, valid_psnr\n")
         save_config(opt)
 
     mse_criterion = nn.MSELoss()
-    fn_REG = nn.MSELoss()
+    #fn_REG = nn.MSELoss()
     
     if opt.use_cuda:
         mse_criterion = mse_criterion.to(opt.device)
@@ -68,8 +66,8 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
     print('train_dir : {}\ntest_dir : {}\nimg_dir : {}\ngt_img_dir : {}'.format(opt.train_dir, opt.test_dir, opt.img_dir, opt.gt_img_dir))
 
     current_best_psnr = 0.0
-    TRAIN_PLAN  = [5/255., 10/255., 15/255., 20/255., 25/255.]
 
+    TRAIN_PLAN  = [5/255., 10/255., 15/255., 20/255., 25/255.]
     num_iter_plan = [1001, 1001, 1001, 1001, 1001]
     noisy_np_norm = np.random.normal(0.0, 1.0, size= opt.patch_size)
     
@@ -82,7 +80,6 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
     for epoch in range(opt.start_epoch, opt.n_epochs):
         opt.epoch_num = epoch
         train_loss = 0.0
-        valid_loss = 0.0
         train_psnr = 0.0
 
         net.train()
@@ -90,18 +87,16 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
         print("*** Training ***")
         start_time = time.time()
         for iteration_t, batch in enumerate(n2c_t_loader, 1):
-            input_img,noise,real = batch['input_img'], batch['noise'], batch['real']
+            input,noisy,clean = batch['input'], batch['noisy'], batch['clean']
 
             if opt.use_cuda:
-                input_img,noise,real = input_img.to(opt.device),noise.to(opt.device),real.to(opt.device)
-
-            #discriminator
-            optimizer.zero_grad()
+                input,noisy,clean = input.to(opt.device),noisy.to(opt.device),clean.to(opt.device)
            
-            out = net(input_img).cuda()
+            output = net(input).cuda()
 
-            loss_n2c = mse_criterion(out, noise)
+            loss_n2c = mse_criterion(output, noisy)
 
+            optimizer.zero_grad()
             loss_n2c.backward()
             optimizer.step()
     
@@ -109,7 +104,7 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
     
             # print("max(out):", torch.max(out))
             # print("min(out):", torch.min(out))
-            mse_loss = mse_criterion(out, real)
+            mse_loss = mse_criterion(output, clean)
             psnr = 10 * math.log10(1 / mse_loss.item())
             train_psnr += psnr
 
@@ -117,24 +112,28 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
                 ('Training', time.time() - start_time, opt.epoch_num, opt.n_epochs, iteration_t, len(n2c_t_loader), loss_n2c, psnr))
         print("Mayo avg_Loss : %.5f Mayo avg_PSNR : %.5f"%(train_loss/iteration_t, train_psnr/iteration_t))
         
-        valid_psnr = 0.0
         valid_loss = 0.0
-        start_valid = time.time()
+        valid_psnr = 0.0
+
+        net.eval()
+
         print("***Validation***")
+        start_valid = time.time()
     
         for iteration_v, batch in enumerate(n2c_v_loader, 1):
-            input_img,noise,real = batch['input_img'], batch['noise'], batch['real']
+            input,noisy,clean = batch['input'], batch['noisy'], batch['clean']
 
             if opt.use_cuda:
-                input_img,noise,real = input_img.to(opt.device),noise.to(opt.device),real.to(opt.device)
+                input,noisy,clean = input.to(opt.device),noisy.to(opt.device),clean.to(opt.device)
 
             with torch.no_grad():
-                net.eval()
-                out = net(input_img)
-                loss_n2c = mse_criterion(out, noise)
+                output = net(input)
+                loss_n2c = mse_criterion(output, noise)
                 valid_loss += loss_n2c
-                mse_loss = mse_criterion(out, real)
-                nmse_loss = mse_criterion(input_img,real)
+
+                mse_loss = mse_criterion(output, clean)
+                nmse_loss = mse_criterion(input, clean)
+
                 psnr = 10 * math.log10(1 / mse_loss.item())
                 npsnr = 10 * math.log10(1 / nmse_loss.item())
                 valid_psnr += psnr
@@ -143,19 +142,18 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
                 'Validation', time.time()-start_valid, epoch, opt.n_epochs, iteration_v, len(n2c_v_loader), loss_n2c, npsnr, psnr))
     
         print("Mayo avg_Loss : %.5f Mayo avg_PSNR : %.5f"%(valid_loss/iteration_v, valid_psnr/iteration_v))
-        
 
-        train_psnr = train_psnr/iteration_t
         train_loss = train_loss/iteration_t
-        valid_psnr = valid_psnr/iteration_v
+        train_psnr = train_psnr/iteration_t
         valid_loss = valid_loss/iteration_v
+        valid_psnr = valid_psnr/iteration_v
 
         with open(log_file, mode='a') as f:
             f.write("%d,%08f,%08f,%08f,%08f"%(
                 epoch,
                 train_loss,
-                valid_loss,
                 train_psnr,
+                valid_loss,
                 valid_psnr
             ))
 
@@ -163,14 +161,6 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
             save_checkpoint(opt, net, optimizer, epoch, valid_loss)
             current_best_psnr = valid_psnr
             
-            #gloss, ploss, fgloss, dloss, gploss, advloss, domain_gploss
-            valid_loss += valid_loss
-            # print("max(out):", torch.max(out))
-            # print("min(out):", torch.min(out))
-
-            print("%s %.2fs => Epoch[%d/%d]: train_PSNR: %.5f train_loss: %.5f valid_loss: %.5f valid_PSNR: %.5f " %('Validation', 
-            time.time() - start_time, opt.epoch_num, opt.n_epochs, train_psnr, train_loss, valid_psnr, valid_loss ))
-
 
 
     

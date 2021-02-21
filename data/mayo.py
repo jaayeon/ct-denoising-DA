@@ -79,9 +79,9 @@ class Mayo(PatchData):
         if self.args.way == 'n2v':
             input, mask = self.generate_mask(copy.deepcopy(label))
             pro_data = common.np2Tensor(input, label, mask, n_channels=self.n_channels)
-            lbl = common.np2Tensor(pair[1], n_channels=self.n_channels)
+            clean = common.np2Tensor(pair[1], n_channels=self.n_channels)
             input, label, mask = pro_data[0], pro_data[1], pro_data[2] 
-            proc_data = {'label': label, 'input': input, 'mask': mask, 'lbl': lbl[0]}
+            proc_data = {'label': label, 'input': input, 'mask': mask, 'clean': clean[0]}
 
             return proc_data
 
@@ -95,11 +95,11 @@ class Mayo(PatchData):
             noisy_np_norm = np.random.normal(0.0, 1.0, size= (80,80))
             noisy_np = noisy_np_norm * (sigma_now)
             #print(pair[0].shape)
-            noise, input_img = self.get_noisy_noisy_image_with_noise(noisy_np, label)
-            pro_data = common.np2Tensor(noise, input_img,  n_channels=self.n_channels)
-            real = common.np2Tensor(pair[1], n_channels=self.n_channels)
-            noise, input_img = pro_data[0], pro_data[1]
-            proc_data = {'input_img': input_img, 'noise': noise, 'real': real[0]}
+            noisy, input = self.get_noisy_noisy_image_with_noise(noisy_np, label)
+            pro_data = common.np2Tensor(noisy, input,  n_channels=self.n_channels)
+            clean = common.np2Tensor(pair[1], n_channels=self.n_channels)
+            noisy, input = pro_data[0], pro_data[1]
+            proc_data = {'input': input, 'noisy': noisy, 'clean': clean[0]}
 
             return proc_data
 

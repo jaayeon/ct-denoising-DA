@@ -9,11 +9,11 @@ test_dir = os.path.join(data_dir, 'test')
 checkpoint_dir= os.path.join(data_dir, 'checkpoint_DA')
 test_result_dir = os.path.join(data_dir, 'test_result_DA')
 
-parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptatio Benchmark')
+parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation Benchmark')
 
 parser.add_argument('--mode', type=str, default= 'train', choices=['train', 'test'])
 parser.add_argument('--model', type=str, default= 'unet', choices=['dncnn', 'unet', 'resnet'])
-parser.add_argument('--way', type=str, default='bilateral', choices=['n2v', 'n2c', 'n2s','bilateral'])
+parser.add_argument('--way', type=str, default= 'bilateral', choices=['n2v', 'n2s', 'n2c', 'n2sim', 'n2i', 'bilateral'])
 
 parser.add_argument('--multi_gpu', default=False, action='store_true',
                     help='Use multiple GPUs')
@@ -96,6 +96,20 @@ parser.add_argument('--mA_full', '-f', type=str, default='level3', choices = ['l
 parser.add_argument('--mA_low', '-l',type=str, default='level5', choices = ['level1','level2','level3','level4','level5','level6'],
                     help='Specify low mA level 1,2,3,4,5,6 of phantom dataset')
 
+parser.add_argument('--test_every', type=int, default=500,
+                    help='do test per every N batches')
+parser.add_argument('--checkpoint_dir', type=str, default=checkpoint_dir,
+                    help='Path to checkpoint directory')
+parser.add_argument('--select_checkpoint', default=False, action='store_true',
+                    help='Choose checkpoint directory')
+parser.add_argument('--resume', default=False, action='store_true',
+                    help='Resume last checkpoint')
+parser.add_argument('--resume_best', default=False, action='store_true',
+                    help='Resume best accuracy checkpoint')
+parser.add_argument('--epoch_num', type=int, default=0,
+                    help='epoch number to restart')
+parser.add_argument('--ensemble', default=False, action='store_true',
+                    help='self ensemble in test')
 
 # Optimizer specification
 parser.add_argument("--optimizer", type=str, default='adam',
