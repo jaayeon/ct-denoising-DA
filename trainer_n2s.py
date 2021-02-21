@@ -14,6 +14,8 @@ from torch.utils.data import DataLoader
 from models import set_model
 from utils.saver import load_model, save_checkpoint, save_config
 from utils.helper import set_gpu, set_checkpoint_dir
+from torch.nn import MSELoss
+from mask import Masker
 
 def run_train(opt, training_dataloader, valid_dataloader):
 
@@ -27,11 +29,8 @@ def run_train(opt, training_dataloader, valid_dataloader):
     # if opt.use_cuda:
     #     net = net.to(opt.device)
     
-    print("Setting Optimizer")
-    if opt.optimizer == 'adam':
-        optimizer = optim.Adam(net.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=0)
-        print("===> Use Adam optimizer")
-    
+    optimizer = optim.Adam(net.parameters(), lr=0.001)
+
     if opt.resume:
         opt.start_epoch, net, optimizer = load_model(opt, net, optimizer=optimizer)
     else:
@@ -40,8 +39,8 @@ def run_train(opt, training_dataloader, valid_dataloader):
     if not os.path.exists(opt.checkpoint_dir):
         os.makedirs(opt.checkpoint_dir)
 
-    log_file = os.path.join(opt.checkpoint_dir, opt.model + "_log.csv")
-    opt_file = os.path.join(opt.checkpoint_dir, opt.model + "_opt.txt")
+    log_file = os.path.join(opt.checkpoint_dir, 'noise2self' + "_log.csv")
+    opt_file = os.path.join(opt.checkpoint_dir, 'noise2self' + "_opt.txt")
     
     if opt.multi_gpu:
         net = nn.DataParallel(net)
@@ -49,16 +48,11 @@ def run_train(opt, training_dataloader, valid_dataloader):
     scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5, mode='min')
     # scheduler = StepLR(optimizer, step_size=50, gamma=0.5)
 
-    # Setting loss function
-    if opt.loss == 'l1':
-        loss_criterion = nn.L1Loss()
-    elif opt.loss == 'l2':
-        loss_criterion = nn.MSELoss()
-    else:
-        raise ValueError("Please specify correct loss function")
+    loss_function = MSELoss()
+    masker = Masker(width=4, mode = 'interpolate')
 
     if opt.use_cuda:
-        loss_criterion = loss_criterion.to(opt.device)
+        loss_function = loss_function.to(opt.device)
 
     # Create log file when training start
     if opt.start_epoch == 1:
@@ -72,7 +66,7 @@ def run_train(opt, training_dataloader, valid_dataloader):
     }
     modes = ['train', 'valid']
 
-    mse_criterion = nn.MSELoss()
+    mse_criterion = MSELoss()
     
     if opt.use_cuda:
         mse_criterion = mse_criterion.to(opt.device)
@@ -94,36 +88,47 @@ def run_train(opt, training_dataloader, valid_dataloader):
             mode = "Training" if phase == 'train' else "Validation"
             print("*** %s ***"%(mode))
             start_time = time.time()
-            for iteration, batch in enumerate(dataloader[phase], 1):
-                x, target = batch[0], batch[1]
-                
+
+            for i, batch in enumerate(dataloader[phase], 1):
+                noisy_images, clean_images = batch[0], batch[1]
+
                 if opt.use_cuda:
-                    x = x.to(opt.device)
-                    target = target.to(opt.device)
+                    noisy_images = noisy_images.to(opt.device)
+                    clean_images = clean_images.to(opt.device)
+                
+                net_input, mask = masker.mask(noisy_images, i)
+                net_output = net(net_input)
 
-                with torch.set_grad_enabled(phase=='train'):
-                    optimizer.zero_grad()
+                loss = loss_function(net_output*mask, noisy_images*mask)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-                    out = net(x)
-                    loss = loss_criterion(out, target)
+                # x, target = batch[0], batch[1]
+                
+                
 
-                    if phase == 'train':
-                        loss.backward()
-                        optimizer.step()
+                # with torch.set_grad_enabled(phase=='train'):
+                #     optimizer.zero_grad()
+
+                #     out = net(x)
+                #     loss = loss_criterion(out, target)
+
+                #     if phase == 'train':
+                #         loss.backward()
+                #         optimizer.step()
                         
-                    total_loss += loss.item()
+                total_loss += loss.item()
 
-                # print("max(out):", torch.max(out))
-                # print("min(out):", torch.min(out))
-                mse_loss = mse_criterion(out, target)
+                mse_loss = mse_criterion(net_output, clean_images)
                 psnr = 10 * math.log10(1 / mse_loss.item())
                 total_psnr += psnr
 
                 print("%s %.2fs => Epoch[%d/%d](%d/%d): Loss: %.10f PSNR: %.5f" %
-                    (mode, time.time() - start_time, opt.epoch_num, opt.n_epochs, iteration, len(dataloader[phase]), loss.item(), psnr))
+                    (mode, time.time() - start_time, opt.epoch_num, opt.n_epochs, i, len(dataloader[phase]), loss.item(), psnr))
 
-            epoch_avg_loss = total_loss / iteration
-            epoch_avg_psnr = total_psnr / iteration
+            epoch_avg_loss = total_loss / i
+            epoch_avg_psnr = total_psnr / i
 
             if phase == 'train':
                 train_loss = epoch_avg_loss
@@ -146,6 +151,4 @@ def run_train(opt, training_dataloader, valid_dataloader):
         if current_best_psnr < valid_psnr : 
             save_checkpoint(opt, net, optimizer, epoch, valid_loss)
             current_best_psnr = valid_psnr
-
-
-    
+s

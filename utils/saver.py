@@ -18,7 +18,11 @@ def load_config(opt):
     patch_size = opt.patch_size
     test_patches = opt.test_patches
     patch_offset = opt.patch_offset
-    dataset = opt.dataset
+    target = opt.target
+    mA_full = opt.mA_full
+    mA_low = opt.mA_low
+    anatomy = opt.anatomy
+    thickness = opt.thickness
 
     checkpoint_dir = select_checkpoint_dir(opt)
     
@@ -36,18 +40,22 @@ def load_config(opt):
     opt.patch_size = patch_size
     opt.test_patches = test_patches
     opt.patch_offset = patch_offset
-    opt.dataset = dataset
+    opt.target = target
+    opt.anatomy = anatomy
+    opt.thickness = thickness
 
-    if opt.dataset == 'lp-mayo':
+    if opt.target == 'lp-mayo':
         opt.gt_img_dir = r'../../data/denoising/test/lp-mayo/full'
         opt.img_dir = r'../../data/denoising/test/lp-mayo/low'
-    elif opt.dataset == 'mayo':
-        opt.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm/L506'.format(opt.thickness)
-        opt.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm/L506'.format(opt.thickness)
-    elif opt.dataset == 'piglet':
-        opt.gt_img_dir = r'../../data/denoising/test/piglet/full'
-        opt.img_dir = r'../../data/denoising/test/piglet/quarter'
-
+    elif opt.target == 'mayo':
+        opt.img_dir = r'../../data/denoising/test/mayo/quarter_{}mm/*'.format(opt.thickness)
+        opt.gt_img_dir = r'../../data/denoising/test/mayo/full_{}mm/*'.format(opt.thickness)
+    elif opt.target == 'piglet':
+        opt.gt_img_dir = r'../../data/denoising/test/piglet/full/*'
+        opt.img_dir = r'../../data/denoising/test/piglet/Oten/*'
+    else:
+        opt.gt_img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(opt.target, opt.anatomy, opt.mA_full)
+        opt.img_dir = r'../../data/denoising/test/phantom/{}/{}/{}*'.format(opt.target, opt.anatomy, opt.mA_low)
     return opt
 
 
@@ -70,9 +78,11 @@ def select_checkpoint_dir(opt):
 def save_checkpoint(opt, model, optimizer, epoch, loss):
     # checkpoint_dir = os.path.join(opt.checkpoint_dir, opt.model + '-patch' + str(opt.patch_size))
     checkpoint_dir = opt.checkpoint_dir
+    model_name = opt.model
+
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
-    checkpoint_path = os.path.join(checkpoint_dir, "models_epoch_%04d_loss_%.8f.pth" % (epoch, loss))
+    checkpoint_path = os.path.join(checkpoint_dir, "%s_epoch_%04d_loss_%.8f.pth" % (model_name, epoch, loss))
     checkpoint_path = os.path.abspath(checkpoint_path)
     
     if torch.cuda.device_count() > 1 and opt.multi_gpu:
@@ -95,7 +105,6 @@ def load_model(opt, model, optimizer=None):
     else:
         checkpoint_dir = os.path.join(opt.checkpoint_dir, opt.model)
         raise RuntimeError("Please check option to load model")
-
 
     # we will check from last, best, and specific epoch_num model
     # checkpoint_list = os.listdir(checkpoint_dir)
@@ -129,5 +138,10 @@ def load_model(opt, model, optimizer=None):
     print("Using epoch_num:", n_epoch)
     
     opt.checkpoint_dir = checkpoint_dir
+    print(model)
+    print(opt.model)
+    #if opt.model == 'wganvgg' or 'wganvgg_rev':
+    #    return n_epoch+1, model.generator, optimizer
+    #else : 
     return n_epoch + 1, model, optimizer
 

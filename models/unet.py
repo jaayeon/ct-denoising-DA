@@ -3,21 +3,54 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from models.convs import common
-from models.convs import attention
-
-from utils.wavelet import normalize_coeffs, unnormalize_coeffs, standarize_coeffs, unstandarize_coeffs
+#from models.convs import attention
 
 def make_model(opt):
     return UNet(opt)
+
+class discriminator(nn.Module):
+    def __init__(self, input_size):
+        super(discriminator, self).__init__()
+        def conv_output_size(input_size, kernel_size_list, stride_list):
+            n = (input_size - kernel_size_list[0]) // stride_list[0] + 1
+            for k, s in zip(kernel_size_list[1:], stride_list[1:]):
+                n = (n - k) // s + 1
+            return n
+
+        def add_block(layers, ch_in, ch_out, stride):
+            layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 0))
+            layers.append(nn.LeakyReLU())
+            return layers
+
+        layers = []
+        ch_stride_set = [(1,64,1),(64,64,2),(64,128,1),(128,128,2),(128,256,1),(256,256,2)]
+        for ch_in, ch_out, stride in ch_stride_set:
+            add_block(layers, ch_in, ch_out, stride)
+
+        self.output_size = conv_output_size(input_size, [3]*6, [1,2]*3)
+        self.net = nn.Sequential(*layers)
+        self.fc1 = nn.Linear(256*self.output_size*self.output_size, 1024)
+        self.fc2 = nn.Linear(1024, 1)
+        self.lrelu = nn.LeakyReLU()
+        self.mse_loss = nn.MSELoss()
+
+    def forward(self, x, lbl=None):
+        out = self.net(x)
+        out = out.view(-1, 256*self.output_size*self.output_size)
+        out = self.lrelu(self.fc1(out))
+        out = self.fc2(out)
+
+        self.loss = self.mse_loss(out, Variable(torch.FloatTensor(x.data.size()).fill_(lbl)).cuda())
+        return out
 
 
 class UNet(nn.Module):
     def __init__(self, opt):
         super(UNet, self).__init__()
-        c = opt.swt_num_channels
+        self.discriminator = discriminator(opt.patch_size)
 
-        self.ch_mean = opt.ch_mean
-        self.ch_std = opt.ch_std
+        c = opt.n_channels
+        self.Loss = nn.L1Loss()
         
         self.inc = nn.Sequential(
             single_conv(c, 64),
@@ -56,9 +89,9 @@ class UNet(nn.Module):
 
         self.outc = outconv(64, c)
 
-    def forward(self, x):
+    def forward(self, x, lbl=None):
 
-        x = standarize_coeffs(x, ch_mean=self.ch_mean, ch_std=self.ch_std)
+        #x = standarize_coeffs(x, ch_mean=self.ch_mean, ch_std=self.ch_std)
         inx = self.inc(x)
 
         down1 = self.down1(inx)
@@ -75,8 +108,14 @@ class UNet(nn.Module):
 
         out = self.outc(conv4)
         out = out + x
-        out = unstandarize_coeffs(out, ch_mean=self.ch_mean, ch_std=self.ch_std)
+        #out = unstandarize_coeffs(out, ch_mean=self.ch_mean, ch_std=self.ch_std)
+        if lbl == None:
+            pass
+        else : 
+            self.loss = self.Loss(out, lbl)
+        
         return out
+        # return out, conv1,conv2,conv3,conv4
 
 
 class single_conv(nn.Module):

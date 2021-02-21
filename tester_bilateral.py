@@ -3,7 +3,7 @@ import time
 
 from skimage.external.tifffile import imsave, imread
 import numpy as np
-
+import cv2
 import torch
 import torch.nn as nn
 
@@ -17,22 +17,13 @@ from models import set_model
 from utils.helper import set_gpu, set_test_dir
 
 def run_test(opt, img_list, gt_img_list):
-    print('- Initialize networks for training')
-    net = set_model(opt)
-    _, net, _ = load_model(opt, net)
-    print(net)
+    print('- Apply bilateral Filter -')
 
     opt = set_gpu(opt)
     opt.device = 'cpu'
-
-    if opt.use_cuda:
-        net = net.to(opt.device)
-
-    if opt.multi_gpu:
-        net = nn.DataParallel(net)
-
-    # opt.test_result_dir = opt.test_result_dir + "-" + opt.model + '-patch' + str(opt.patch_size)
-    set_test_dir(opt)
+    #set_test_dir(opt)
+    opt.test_result_dir = opt.test_result_dir + '/Bilateral filter_' + str(opt.thickness) + 'mm'
+    #set_test_dir(opt)
     if not os.path.exists(opt.test_result_dir):
         os.makedirs(opt.test_result_dir)
 
@@ -52,7 +43,9 @@ def run_test(opt, img_list, gt_img_list):
     noise_avg_loss = 0.0
     noise_avg_psnr = 0.0
     noise_avg_ssim = 0.0
+
     for img_idx, path in enumerate(zip(img_list,gt_img_list),1):
+
         if img_idx % 4 :
             pass
         else:
@@ -85,12 +78,6 @@ def run_test(opt, img_list, gt_img_list):
             else : 
                 input_tensor = input_img_tensor
 
-
-            # else:
-            #     input_tensor = input_img
-            #     if len(img.shape) ==2:
-            #         img = img.reshape(1, 1, img.shape[0], img.shape[1])
-
             input_tensor_shape = input_tensor.shape
             input_tensor = input_tensor.type(torch.FloatTensor)
             out = torch.ones(input_tensor_shape)
@@ -98,35 +85,18 @@ def run_test(opt, img_list, gt_img_list):
             if opt.use_cuda:
                 input_tensor = input_tensor.to(opt.device)
 
-            with torch.no_grad(): #(b,c,h,w) or (1,1,h,w)
-                if opt.ensemble:
-                    """  
-                    ensemble code... i'll add it later
-                    """
-                    out_tensor = torch.zeros(input_tensor.shape)
-                    for i in range(input_tensor.size(0)):
-                        print("input_tensor[{}:{}].shape: {}".format(i, i+1, input_tensor[i:i+1].shape))
-                        out_tensor[i] = forward_ensemble(input_tensor[i:i+1], net=net, device=opt.device)
-                else:
-                    out_tensor = net(input_tensor)
-                # print("out_tensor:", out_tensor.size())
+            self_img = torch.squeeze(input_tensor,0)
+            self_img = self_img[0,:,:]
+            self_img = self_img.numpy()
+            self_filter_img = cv2.bilateralFilter(self_img, opt.d, opt.window, opt.window)
 
-                out_tensor = out_tensor.to(opt.device)
-
-                # out = out.reshape(img_dims)
-                # print("out.shape:", out.shape)
+            out_img_tensor = torch.tensor(self_filter_img)
+            out_img_tensor = torch.unsqueeze(out_img_tensor,0)
+            out_img_tensor = torch.unsqueeze(out_img_tensor,0)
+            #print(out_img_tensor.shape)
 
             out_img_path = os.path.join(opt.test_result_dir, img_name)
             concat_img_path = os.path.join(test_concat_dir, concat_name)
-            
-
-            if opt.test_patches:
-                out_tensor = mp.recon_tensor_arr_patches(out_tensor, input_img.shape[1], input_img.shape[0], opt.patch_size, opt.patch_offset)
-                print("out_img.shape:", out_tensor.shape)
-                out_img_tensor = unpad_tensor(out_tensor, opt.patch_offset, input_tensor_shape)
-                print("unpad out_img.shape:", out_img_tensor.shape)
-            else:
-                out_img_tensor = out_tensor
 
             noise_loss, noise_psnr, noise_ssim, batch_loss, batch_psnr, batch_ssim = calc_metrics(input_img_tensor, out_img_tensor, gt_img_tensor)
             # print('nl : {:.8f}, np : {:.8f}, ol : {:.8f}, op : {:.8f}'.format(noise_loss, noise_psnr, batch_loss, batch_psnr))
@@ -146,8 +116,8 @@ def run_test(opt, img_list, gt_img_list):
             noise_avg_loss += noise_loss
             noise_avg_psnr += noise_psnr
             noise_avg_ssim += noise_ssim
-
-
+            
+ 
             print("** Test {:.3f}s => Image({}/{}): Noise Loss: {:.8f}, Noise PSNR: {:.8f}, Noise SSIM: {:.8f}, Loss: {:.8f}, PSNR: {:.8f}, SSIM: {:.8f}".format(
                 time.time() - start_time, img_idx, num_test_img, noise_loss.item(), noise_psnr.item(), noise_ssim.item(), batch_loss.item(), batch_psnr.item(), batch_ssim.item()
             ))
@@ -158,7 +128,7 @@ def run_test(opt, img_list, gt_img_list):
             imsave(out_img_path, out_img)
 
     print(" #{:d} Test Average Noise Loss: {:.8f}, Average Noise PSNR: {:.8f}, Average Noise SSIM: {:.8f}, Average Loss: {:.8f}, Average PSNR: {:.8f}, Average SSIM: {:.8f}".format(
-        num, noise_avg_loss / num, noise_avg_psnr / num, noise_avg_ssim / num, avg_loss / num, avg_psnr / num, avg_ssim / num
-    ))
+        num, noise_avg_loss / num, noise_avg_psnr / num, noise_avg_ssim / num, avg_loss / num, avg_psnr / num, avg_ssim / num))
+    
 
     print("---Time: %.4fs\n" % (time.time() - start_time))
