@@ -1,4 +1,5 @@
-import sys, os, glob
+import sys, os
+import glob
 import time
 
 from skimage.external.tifffile import imsave, imread
@@ -17,7 +18,7 @@ from models import set_model
 from utils.helper import set_gpu, set_test_dir
 
 def run_test(opt, img_list, gt_img_list):
-    print('- Apply bilateral Filter -')
+    print('- Apply bilateral Filter')
 
     opt = set_gpu(opt)
     opt.device = 'cpu'
@@ -35,6 +36,8 @@ def run_test(opt, img_list, gt_img_list):
     gt_img_list.sort()
 
     num_total_img = len(img_list)
+
+    #print(num_total_img)
 
     num = 0
     avg_loss = 0.0

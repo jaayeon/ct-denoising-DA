@@ -156,7 +156,7 @@ def run_train(opt, n2s_t_loader, n2s_v_loader):
         valid_psnr = valid_psnr/iteration_v
 
         with open(log_file, mode='a') as f:
-            f.write("%d,%08f,%08f,%08f,%08f"%(
+            f.write("%d,%08f,%08f,%08f,%08f\n"%(
                 epoch,
                 train_loss,
                 train_psnr,

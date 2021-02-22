@@ -11,6 +11,7 @@ from data import common
 class Mayo(PatchData):
     def __init__(self, args, name='mayo', mode='train', domain_sync=None, benchmark=False):
         self.thickness = args.thickness
+        self.idx_num = 0
         super(Mayo, self).__init__(
             args, name=name, mode=mode, domain_sync=domain_sync, benchmark=benchmark)
             
@@ -87,13 +88,11 @@ class Mayo(PatchData):
 
 
         elif self.args.way == 'n2c':
-            #TRAIN_PLAN = [5/255., 10/255., 15/255., 20/255., 25/255.] 
-            #num = int(int(idx) % 5)
-            #sigma_now = TRAIN_PLAN[num]
-
-            sigma_now = 5/255.
-            noisy_np_norm = np.random.normal(0.0, 1.0, size= (80,80))
-            noisy_np = noisy_np_norm * (sigma_now)
+            self.idx_num += 1
+            sigma_num = self.idx_num // 5608
+            sigma_now = [5/255., 10/255., 15/255., 20/255., 25/255., 5/255., 10/255., 15/255., 20/255., 25/255.]
+            noisy_np_norm = np.random.normal(0.0, 1.0, size= (self.args.patch_size, self.args.patch_size))
+            noisy_np = noisy_np_norm * (sigma_now[sigma_num])
             #print(pair[0].shape)
             noisy, input = self.get_noisy_noisy_image_with_noise(noisy_np, label)
             pro_data = common.np2Tensor(noisy, input,  n_channels=self.n_channels)

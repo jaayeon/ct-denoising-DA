@@ -66,7 +66,7 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
     print('train_dir : {}\ntest_dir : {}\nimg_dir : {}\ngt_img_dir : {}'.format(opt.train_dir, opt.test_dir, opt.img_dir, opt.gt_img_dir))
 
     current_best_psnr = 0.0
-
+    """
     TRAIN_PLAN  = [5/255., 10/255., 15/255., 20/255., 25/255.]
     num_iter_plan = [1001, 1001, 1001, 1001, 1001]
     noisy_np_norm = np.random.normal(0.0, 1.0, size= opt.patch_size)
@@ -75,7 +75,7 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
         num_iter = num_iter_plan[current_sigma]
         sigma_now = TRAIN_PLAN[current_sigma]
         noisy_np = noisy_np_norm * (sigma_now)
-
+    """
 
     for epoch in range(opt.start_epoch, opt.n_epochs):
         opt.epoch_num = epoch
@@ -92,7 +92,7 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
             if opt.use_cuda:
                 input,noisy,clean = input.to(opt.device),noisy.to(opt.device),clean.to(opt.device)
            
-            output = net(input).cuda()
+            output = net(input).to(opt.device)
 
             loss_n2c = mse_criterion(output, noisy)
 
@@ -128,7 +128,7 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
 
             with torch.no_grad():
                 output = net(input)
-                loss_n2c = mse_criterion(output, noise)
+                loss_n2c = mse_criterion(output, noisy)
                 valid_loss += loss_n2c
 
                 mse_loss = mse_criterion(output, clean)
@@ -149,7 +149,7 @@ def run_train(opt, n2c_t_loader,n2c_v_loader):
         valid_psnr = valid_psnr/iteration_v
 
         with open(log_file, mode='a') as f:
-            f.write("%d,%08f,%08f,%08f,%08f"%(
+            f.write("%d,%08f,%08f,%08f,%08f\n"%(
                 epoch,
                 train_loss,
                 train_psnr,

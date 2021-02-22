@@ -87,8 +87,13 @@ def get_train_valid_dataloader(args, train_datasets=None, domain_sync=None):
 
 
 def get_test_img_list(opt):
-    img_list = glob.glob(os.path.join(opt.img_dir, '*','*'))
-    gt_img_list = glob.glob(os.path.join(opt.gt_img_dir, '*','*'))
+    if opt.way == 'bilateral':
+        img_list = glob.glob(os.path.join(opt.img_dir, '*','*'))
+        gt_img_list = glob.glob(os.path.join(opt.gt_img_dir, '*','*'))
+    else:
+        img_list = glob.glob(os.path.join(opt.img_dir, '**'))
+        gt_img_list = glob.glob(os.path.join(opt.gt_img_dir, '**'))
     # print(img_list)
     print('test img low path : {}\ntest img high path : {}'.format(opt.img_dir, opt.gt_img_dir))
+    
     return img_list, gt_img_list

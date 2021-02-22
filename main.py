@@ -6,7 +6,6 @@ import trainer_n2v as N2VT
 import trainer_n2c as N2CT
 import trainer_n2s as N2ST
 import trainer_n2sim as N2SimT
-import trainer_n2i as N2IT
 import tester as TST
 import tester_lpmayo as TSTM
 import tester_bilateral as TBL
@@ -36,10 +35,6 @@ if __name__ == '__main__':
             train_n2sim_loader, valid_n2sim_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
             N2SimT.run_train(opt, train_n2sim_loader, valid_n2sim_loader)
 
-        elif opt.way == 'n2i':
-            train_n2i_loader, valid_n2i_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
-            N2IT.run_train(opt, train_n2i_loader, valid_n2i_loader)
-            
         elif opt.way == 'bilateral':
             img_list, gt_img_list = get_test_img_list(opt)
             TBL.run_test(opt, img_list, gt_img_list)
@@ -55,4 +50,4 @@ if __name__ == '__main__':
             TSTM.run_test(opt, img_list, gt_img_list)
         else :
             TST.run_test(opt, img_list, gt_img_list)
-    
+           
