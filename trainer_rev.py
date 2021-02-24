@@ -60,10 +60,12 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         for batch in zip(src_t_loader, trg_t_loader):
             src_img, src_lbl = batch[0][0], batch[0][1]
             trg_img, trg_lbl = batch[1][0], batch[1][1]
+            trg_noise = batch[1][2] if opt.noise else None
 
             if opt.use_cuda:
                 src_img, src_lbl = src_img.to(opt.device), src_lbl.to(opt.device)
                 trg_img, trg_lbl = trg_img.to(opt.device), trg_lbl.to(opt.device)
+                trg_noise = trg_noise.to(opt.device) if opt.noise else None
 
             #domain classifier
             optimizer_dc.zero_grad()
@@ -76,7 +78,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             #denoiser
             optimizer.zero_grad()
             net.denoiser.zero_grad()
-            loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, src_lbl, perceptual=True, return_losses=True)
+            loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, return_losses=True)
             loss.backward()
             optimizer.step()
 
@@ -104,14 +106,16 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         for batch in zip(src_v_loader, trg_v_loader):
             src_img, src_lbl = batch[0][0], batch[0][1]
             trg_img, trg_lbl = batch[1][0], batch[1][1]
+            trg_noise = batch[1][2] if opt.noise else None
 
             if opt.use_cuda:
                 src_img, src_lbl = src_img.to(opt.device), src_lbl.to(opt.device)
                 trg_img, trg_lbl = trg_img.to(opt.device), trg_lbl.to(opt.device)
+                trg_noise = trg_noise.to(opt.device) if opt.noise else None
 
             with torch.no_grad():
                 dc_loss = net.dc_loss(src_img, src_lbl, trg_img)
-                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, src_lbl, perceptual=True,return_losses=True)
+                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, return_losses=True)
 
             #calculate psnr
             src_out = net.src_out

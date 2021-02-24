@@ -1,4 +1,4 @@
-import os
+import os, cv2
 import glob
 import random
 import pickle
@@ -15,7 +15,7 @@ import torch
 import torch.utils.data as data
 
 class PatchData(data.Dataset):
-    def __init__(self, args, name='', mode='train', domain_sync=None, benchmark=False):
+    def __init__(self, args, name='', mode='train', add_noise=None, domain_sync=None, benchmark=False):
         self.args = args
         self.dataset = name
         self.in_mem = args.in_mem
@@ -26,8 +26,8 @@ class PatchData(data.Dataset):
         self.benchmark = benchmark
 
         self.domain_sync = domain_sync
-        # self.add_noise = args.add_noise
-        # self.noise = args.noise
+        self.add_noise = True if add_noise else False
+        self.noise = args.noise
 
         print("Set file system for dataset {}".format(self.dataset))
         self._set_filesystem(args.data_dir)
@@ -123,11 +123,20 @@ class PatchData(data.Dataset):
         # pair = common.set_channel(*pair, n_channels=self.args.n_colors)
         if self.n_channels == 3:
             pair = [(p / 255.0) for p in pair]
-
+        
         pair_t = common.np2Tensor(*pair, n_channels=self.n_channels)
-        # print(pair_t[0].shape)
-        # print(pair_t[1].shape)
-        return pair_t[0], pair_t[1], filename
+        if self.add_noise :
+            #choose noise
+            num_noise_modes = len(self.noise)
+            noise = self.noise[random.randint(1,100)%num_noise_modes]
+            #set parameter index (for mayo 1mm, 3mm)
+            param_idx = 1 if '3mm' in filename else 0 
+            print('{} : paramidx {}'.format(filename, param_idx))
+            nimg = self.make_noise(pair[0], noise=noise, pidx=param_idx)
+            ntensor = common.np2Tensor(nimg, n_channels=self.n_channels)
+            return pair_t[0], pair_t[1], ntensor[0], filename
+        else : 
+            return pair_t[0], pair_t[1], filename
             
     def __len__(self):
         if self.mode == 'train':
@@ -210,3 +219,23 @@ class PatchData(data.Dataset):
         #     lr = common.add_noise(lr, self.noise)
 
         return lr, hr
+
+    def make_noise(self, img, noise='p', pidx=0):
+        if noise=='p':
+            params = self.args.p_lam
+            nimg = np.random.poisson(params[pidx]*img)/float(params[pidx])
+        elif noise=='g':
+            params = self.args.g_std
+            noise = np.random.normal(loc=0, scale=params[pidx], size=img.shape).astype(float)
+            nimg = img + noise
+        elif noise=='p-g':
+            raise NotImplementedError()
+        elif noise=='bf':
+            params = self.args.b_dcs
+            clean = cv2.bilateralFilter(img, int(params[0]), params[1], params[2])
+            noise = img-clean
+            if params[1]<0.1:
+                nimg = img + noise/params[1]/10 #amplify noise.. 0.1-> 1, 0.05->2, 0.01->10
+            else : 
+                nimg = img + noise
+        return nimg

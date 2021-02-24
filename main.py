@@ -22,12 +22,12 @@ if __name__ == '__main__':
 
         elif opt.way == 'rev':
             train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source, domain_sync=opt.domain_sync)
-            train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target, domain_sync=None)
+            train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target, add_noise=opt.noise, domain_sync=None)
             REVT.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
             
         elif opt.way == 'wganrev':
             train_source_loader, valid_source_loader = get_train_valid_dataloader(opt, train_datasets=opt.source, domain_sync=opt.domain_sync)
-            train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target, domain_sync=None)
+            train_target_loader, valid_target_loader = get_train_valid_dataloader(opt, train_datasets=opt.target, add_noise=opt.noise, domain_sync=None)
             WREVT.run_train(opt, train_source_loader, valid_source_loader, train_target_loader, valid_target_loader)
          
         elif opt.way == 'wgan':

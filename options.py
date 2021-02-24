@@ -79,7 +79,12 @@ parser.add_argument('--augment', dest='augment', action='store_true',
 parser.add_argument('--no_augment', dest='augment', action='store_false',
                     help='Do not random flip (vertical, horizontal, rotation)')
 parser.set_defaults(augment=True)
-
+parser.add_argument('--noise', type=str, nargs='+', default=None, choices=['p', 'g', 'p-g', 'bf'],
+                    help='noise options for target image. p-poisson, g-gaussian, bf-bilateral filter')
+parser.add_argument('--p_lam', type=float, nargs='+', default=[400,1400], help='poisson parameter, default 400,1400 for 1,3mm')
+parser.add_argument('--g_std', type=float, nargs='+', default=[0.032,0.016], help='gaussian parameter, default 0.032, 0.016 for 1,3mm')
+parser.add_argument('--b_dcs', type=float, nargs='+', default=[10, 0.1, 1],
+                    help='bilateral filter parameters.The diameter of each pixel neighborhood, Filter sigma in color space, Filter sigma in the coordinate space')
 
 # Mayo dataset specifications
 parser.add_argument('--thickness', type=int, default=0, choices=[0,1,3],

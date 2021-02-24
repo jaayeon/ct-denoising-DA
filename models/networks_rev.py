@@ -20,6 +20,7 @@ class Networks_rev(nn.Module):
         self.denoiser.rev = self.rev
         self.dc_input = opt.dc_input
         self.dc_mode = opt.dc_mode
+        self.noise = opt.noise
         input_size = opt.patch_size
 
         if self.dc_input =='c_img' or self.dc_input == 'c_noise':
@@ -109,17 +110,33 @@ class Networks_rev(nn.Module):
         loss = self.p_criterion(fake_feature, real_feature)
         return loss
 
-    def g_loss(self, src, src_lbl, perceptual=True, return_losses=True):
+    def g_loss(self, src, trg, src_lbl, perceptual=True, trg_noise=None, return_losses=True):
         self.denoiser.train()
         self.domain_discriminator.eval()
-    
-        self.src_out, self.src_feature  = self.denoiser(src)
-        l_loss = self.l_weight * self.l_criterion(self.src_out, src_lbl)
+
+        if not trg_noise==None : 
+            batch = src.size()[0]
+            denoiser_input = torch.cat((src, trg_noise), 0)
+            lbl = torch.cat((src_lbl, trg), 0)
+            out, feature = self.denoiser(denoiser_input)
+            self.src_out = out[:batch, :, :, :]
+            self.feature = feature[:batch, :, :, :]
+        else : 
+            lbl = src_lbl
+            out, feature  = self.denoiser(src)
+            self.src_out = out
+            self.feature = feature
+
+        #l1 l2 loss
+        l_loss = self.l_weight * self.l_criterion(out, lbl)
+
+        #perceptual loss
         if perceptual:
-            p_loss = self.vgg_weight * self.p_loss(self.src_out, src_lbl)
+            p_loss = self.vgg_weight * self.p_loss(out, lbl)
         else:
             p_loss = torch.from_numpy(np.array(0.0))
         
+        #domain classifier loss
         if self.dc_input == 'img':
             d_src = self.domain_discriminator(self.src_out)
         elif self.dc_input == 'noise':
@@ -138,7 +155,10 @@ class Networks_rev(nn.Module):
             rev_loss = self.rev_weight * self.dc_criterion(d_src, src_class)
         else : 
             rev_loss = -self.rev_weight * torch.mean(d_src)
+
+        #weighted sum    
         loss = l_loss + p_loss + rev_loss
+
 
         return (loss, l_loss, p_loss, rev_loss) if return_losses else loss
 
@@ -194,4 +214,3 @@ class Networks_rev(nn.Module):
             target_tensor = target_tensor.cuda() 
 
         return target_tensor
-

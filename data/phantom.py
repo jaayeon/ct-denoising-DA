@@ -10,13 +10,13 @@ from data.patchdata import PatchData
 from data import common
 
 class PHANTOM(PatchData):
-    def __init__(self, args, name='siemens', mode='train', domain_sync=None, benchmark=False):
+    def __init__(self, args, name='siemens', mode='train', add_noise=None, domain_sync=None, benchmark=False):
         self.anatomy = args.anatomy
         self.mA_full = args.mA_full
         self.mA_low = args.mA_low
         self.fake_dir = args.fake_dir
         super(PHANTOM, self).__init__(
-            args, name=name, mode=mode, domain_sync=domain_sync, benchmark=benchmark
+            args, name=name, mode=mode, add_noise=add_noise, domain_sync=domain_sync, benchmark=benchmark
         )
         # PHANTOM specific
 

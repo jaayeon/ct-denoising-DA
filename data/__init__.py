@@ -43,7 +43,7 @@ def get_module_attr(dataset):
 
 
 
-def get_train_valid_dataloader(args, train_datasets=None, domain_sync=None):
+def get_train_valid_dataloader(args, train_datasets=None, add_noise=None, domain_sync=None):
     datasets = []
     if train_datasets == None:
         train_datasets = args.train_datasets
@@ -54,7 +54,7 @@ def get_train_valid_dataloader(args, train_datasets=None, domain_sync=None):
         # module_name = d
         module_name, attr = get_module_attr(d)
         m = import_module('data.' + module_name.lower())
-        datasets.append(getattr(m, attr)(args, name=d, domain_sync= domain_sync))
+        datasets.append(getattr(m, attr)(args, name=d, add_noise=add_noise, domain_sync= domain_sync))
 
     # module_name, attr = get_module_attr(args.dataset)
     # m = import_module('data.' + module_name.lower())
