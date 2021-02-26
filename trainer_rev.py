@@ -22,6 +22,11 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         optimizer_dc = optim.Adam(net.domain_discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay_dc)
         print("===> Use Adam optimizer")
 
+    elif opt.optimizer == 'rms':
+        optimizer = optim.RMSprop(net.denoiser.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay)
+        optimizer_dc = optim.RMSprop(net.domain_discriminator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay)
+        print("===> Use RMSprop optimizer")
+
     if opt.resume:
         print("Choose Model checkpoint")
         opt.start_epoch, net, optimizer = load_model(opt, net, optimizer=optimizer)
