@@ -45,6 +45,10 @@ def set_checkpoint_dir(opt):
     if opt.content_randomization:
         model_opt = model_opt + '-cr'
     
+    if opt.noise:
+        for n in opt.noise:
+            model_opt = model_opt + '-{}'.format(n)
+    
     if opt.source == 'lp-mayo':
         model_opt = model_opt + '-'
         for bp in opt.body_part:
