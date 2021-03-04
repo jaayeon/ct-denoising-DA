@@ -79,12 +79,13 @@ parser.add_argument('--augment', dest='augment', action='store_true',
 parser.add_argument('--no_augment', dest='augment', action='store_false',
                     help='Do not random flip (vertical, horizontal, rotation)')
 parser.set_defaults(augment=True)
-parser.add_argument('--noise', type=str, nargs='+', default=None, choices=['p', 'g', 'p-g', 'bf'],
+parser.add_argument('--noise', type=str, nargs='+', default=None, choices=['p', 'g', 'bf'],
                     help='noise options for target image. p-poisson, g-gaussian, bf-bilateral filter')
 parser.add_argument('--p_lam', type=float, nargs='+', default=[400,1400], help='poisson parameter, default 400,1400 for 1,3mm')
 parser.add_argument('--g_std', type=float, nargs='+', default=[0.032,0.016], help='gaussian parameter, default 0.032, 0.016 for 1,3mm')
-parser.add_argument('--b_dcs', type=float, nargs='+', default=[10, 0.1, 1],
+parser.add_argument('--b_dcs', type=float, nargs='+', default=[10, 0.01, 1],
                     help='bilateral filter parameters.The diameter of each pixel neighborhood, Filter sigma in color space, Filter sigma in the coordinate space')
+parser.add_argument('--scale', type=int, default=1, help='scaling noise in [1, scale]')
 
 # Mayo dataset specifications
 parser.add_argument('--thickness', type=int, default=0, choices=[0,1,3],
@@ -114,8 +115,6 @@ parser.add_argument('--n_resblocks', type=int, default=16,
 #wganvgg
 parser.add_argument('--lambda_gp', type=float, default= 10, 
                     help='lambda_gp for wgan discriminator loss')
-parser.add_argument('--wgan_loss', default=False, action='store_true',
-                    help='include wgan_loss to generator or not')
 parser.add_argument('--n_d_train', type=float, default=4,
                     help='num of discriminator training for each generator training')
 parser.add_argument('--vgg_weight', type=float, default=1,

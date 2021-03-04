@@ -20,7 +20,6 @@ class Networks_rev(nn.Module):
         self.denoiser.rev = self.rev
         self.dc_input = opt.dc_input
         self.dc_mode = opt.dc_mode
-        self.noise = opt.noise
         input_size = opt.patch_size
 
         if self.dc_input =='c_img' or self.dc_input == 'c_noise':

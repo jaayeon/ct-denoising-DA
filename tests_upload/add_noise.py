@@ -15,6 +15,7 @@ if __name__ == "__main__":
     parser.add_argument('--g_std', type=float, nargs='+', default=[0.032, 0.016], help='gaussian parameter, each for 1,3mm')
     parser.add_argument('--b_dcs', type=float, nargs='+', default=[10, 3, 3]
                         , help='bilateral filter parameters.The diameter of each pixel neighborhood, Filter sigma in color space, Filter sigma in the coordinate space')
+    parser.add_argument('--scale', type=float, default=1, help='scaling noise for gaussian, poisson')
     parser.add_argument('--num', type=int, default=20)
     opt = parser.parse_args()
 
@@ -30,8 +31,8 @@ if __name__ == "__main__":
         n_mayo_3q = '../../data/denoising/train/mayo/quarter_3mm_noise/L096_{}_{}_{}_{}'.format(noise_mode, params[0], params[1], params[2])
     else : 
         params = opt.p_lam if opt.noise=='poisson' else opt.g_std
-        n_mayo_1q = '../../data/denoising/train/mayo/quarter_1mm_noise/L096_{}_{}'.format(noise_mode, params[0])
-        n_mayo_3q = '../../data/denoising/train/mayo/quarter_3mm_noise/L096_{}_{}'.format(noise_mode, params[1])
+        n_mayo_1q = '../../data/denoising/train/mayo/quarter_1mm_noise/L096_{}_{}_{}'.format(noise_mode, params[0], opt.scale)
+        n_mayo_3q = '../../data/denoising/train/mayo/quarter_3mm_noise/L096_{}_{}_{}'.format(noise_mode, params[1], opt.scale)
     if not os.path.exists(n_mayo_1q):
         os.mkdir(n_mayo_1q)
     if not os.path.exists(n_mayo_3q):
@@ -57,11 +58,12 @@ if __name__ == "__main__":
                 # vals = 2**np.ceil(np.log2(vals))
                 # nimg = np.random.poisson(qimg*vals)/float(vals)
                 nimg = np.random.poisson(qimg*opt.p_lam[p])/float(opt.p_lam[p])
+                nimg = qimg + opt.scale*(nimg-qimg)
 
             elif noise_mode == 'gaussian':
                 imgname = '{}_{}_{}'.format(noise_mode, params[p], basename)
                 noise = np.random.normal(loc=0, scale=opt.g_std[p], size=qimg.shape).astype(float)
-                nimg = qimg + noise
+                nimg = qimg + opt.scale*noise
             elif noise_mode == 'poisson-gaussian':
                 imgname = '{}_{}_{}'.format(noise_mode, params[p], basename)
                 noise = 0.5*np.random.poisson(lam=opt.p_lam[p], size=qimg.shape).astype(float) + 0.5*np.random.normal(loc=0, scale=opt.g_std[p], size=qimg.shape).astype(float)
