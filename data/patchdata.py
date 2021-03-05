@@ -28,7 +28,8 @@ class PatchData(data.Dataset):
         self.domain_sync = domain_sync
         self.add_noise = True if add_noise else False
         self.noise = opt.noise
-        self.scale = opt.scale #noise scale
+        self.scale_max = opt.scale_max # max noise scale
+        self.scale_min = opt.scale_min # min noise scale
 
         print("Set file system for dataset {}".format(self.dataset))
         self._set_filesystem(opt.data_dir)
@@ -132,7 +133,7 @@ class PatchData(data.Dataset):
             noise = self.noise[random.randint(0,num_noise_modes-1)]
             #set parameter index (for mayo 1mm, 3mm)
             param_idx = 1 if '3mm' in filename else 0 
-            nimg = self.make_noise(pair[0], noise=noise, pidx=param_idx, scale=self.scale)
+            nimg = self.make_noise(pair[0], noise=noise, pidx=param_idx, scale_max=self.scale_max, scale_min=self.scale_min)
             ntensor = common.np2Tensor(nimg, n_channels=self.n_channels)
             return pair_t[0], pair_t[1], ntensor[0], filename
         else : 
@@ -220,8 +221,8 @@ class PatchData(data.Dataset):
 
         return lr, hr
 
-    def make_noise(self, img, noise='p', pidx=0, scale=1):
-        scale = random.randint(1*2,scale*2)/2
+    def make_noise(self, img, noise='p', pidx=0, scale_max=3, scale_min=0.5):
+        scale = random.randint(scale_min*2,scale_max*2)/2
         if noise=='p':
             params = self.opt.p_lam
             nimg = np.random.poisson(params[pidx]*img)/float(params[pidx])
