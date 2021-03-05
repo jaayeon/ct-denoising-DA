@@ -221,6 +221,7 @@ class PatchData(data.Dataset):
         return lr, hr
 
     def make_noise(self, img, noise='p', pidx=0, scale=1):
+        scale = random.randint(1*2,scale*2)/2
         if noise=='p':
             params = self.opt.p_lam
             nimg = np.random.poisson(params[pidx]*img)/float(params[pidx])
