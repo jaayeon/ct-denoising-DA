@@ -37,11 +37,6 @@ def set_checkpoint_dir(opt):
         dataset_name = dataset_name + d
     model_opt = dataset_name  + "-" + date + "-" + opt.way + '-' + opt.model
 
-    if opt.domain_sync == None:
-        pass
-    else : 
-        model_opt = model_opt + '-' + opt.domain_sync
-
     if opt.content_randomization:
         model_opt = model_opt + '-cr'
     

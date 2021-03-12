@@ -15,7 +15,7 @@ class Record():
         self.train_length = train_length
         self.valid_length = valid_length
 
-        self.epoch = 1
+        self.epoch = opt.start_epoch
         self.train = [0]*self.key_length
         self.valid = [0]*self.key_length
         self.buffer = [0]*self.key_length
@@ -30,8 +30,9 @@ class Record():
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir)
 
-        with open(self.log_file, mode='w') as f:
-            f.write('epoch, {}, {}'.format('-t, '.join(self.keys), '-v, '.join(self.keys)))
+        if self.epoch == 1:
+            with open(self.log_file, mode='w') as f:
+                f.write('epoch, {}, {}\n'.format('-t, '.join(self.keys), '-v, '.join(self.keys)))
 
         with open(self.opt_file, 'w') as f:
             json.dump(opt.__dict__, f, indent=2)
@@ -77,7 +78,7 @@ class Record():
         #write log
         with open(self.log_file, mode='a') as f:
             f.write('{}, {}, {}\n'.format(self.epoch, ', '.join([str(i) for i in self.train]), ', '.join([str(i) for i in self.valid])))
-        #initiate it for next epoch
+        #initialize for next epoch
         self.train = [0]*self.key_length
         self.valid = [0]*self.key_length
         self.train_iter = 0
@@ -95,11 +96,11 @@ class Record():
             self.best_psnr = current_psnr
             checkpoint_path = os.path.join(self.checkpoint_dir, "{}_epoch_{}_psnr_{:.8f}.pth" .format(self.model_name, str(self.epoch).zfill(4), current_psnr))
             checkpoint_path = os.path.abspath(checkpoint_path)
-            
+            optimizers=[optimizer[i].state_dict() for i in range(len(optimizer))]
             if torch.cuda.device_count() > 1 and self.opt.multi_gpu:
-                state = {"epoch": self.epoch, "model": model.module.state_dict(), "optimizer": optimizer.state_dict()}
+                state = {"epoch": self.epoch, "model": model.module.state_dict(), "optimizer": optimizers}
             else:
-                state = {"epoch": self.epoch, "model": model.state_dict(), "optimizer": optimizer.state_dict()}
+                state = {"epoch": self.epoch, "model": model.state_dict(), "optimizer": optimizers}
 
             torch.save(state, checkpoint_path)
             print("Checkpoint saved to {}".format(checkpoint_path))

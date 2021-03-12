@@ -107,7 +107,9 @@ def load_model(opt, model, optimizer=None):
         n_epoch = checkpoint['epoch']
         model.load_state_dict(checkpoint['model'])
         if optimizer is not None:
-            optimizer.load_state_dict(checkpoint['optimizer'])
+            for i in range(len(optimizer)):
+                optimizer[i].load_state_dict(checkpoint['optimizer'][i])
+            # optimizer.load_state_dict(checkpoint['optimizer'])
         print("=> loaded checkpoint '{}' (epoch {})"
                 .format(checkpoint_path, n_epoch))
     else:
@@ -117,7 +119,10 @@ def load_model(opt, model, optimizer=None):
     
     opt.checkpoint_dir = checkpoint_dir
     print(model)
-    if opt.way == 'wgan' or opt.way == 'wganrev':
-        return n_epoch+1, model.generator, optimizer
-    elif opt.way == 'rev' or opt.way == 'base':
-        return n_epoch+1, model.denoiser, optimizer
+    if opt.mode == 'train':
+        return n_epoch+1, model, optimizer
+    else : 
+        if opt.way == 'wgan' or opt.way == 'wganrev':
+            return n_epoch+1, model.generator, optimizer
+        elif opt.way == 'rev' or opt.way == 'base':
+            return n_epoch+1, model.denoiser, optimizer

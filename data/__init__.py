@@ -43,10 +43,10 @@ def get_module_attr(dataset):
 
 
 
-def get_train_valid_dataloader(args, train_datasets=None, add_noise=None, domain_sync=None):
+def get_train_valid_dataloader(opt, train_datasets=None, add_noise=None, fine_tuning=None):
     datasets = []
     if train_datasets == None:
-        train_datasets = args.train_datasets
+        train_datasets = opt.train_datasets
     else : 
         train_datasets = [train_datasets]
     print("Train datasets: ", train_datasets)
@@ -54,32 +54,32 @@ def get_train_valid_dataloader(args, train_datasets=None, add_noise=None, domain
         # module_name = d
         module_name, attr = get_module_attr(d)
         m = import_module('data.' + module_name.lower())
-        datasets.append(getattr(m, attr)(args, name=d, add_noise=add_noise, domain_sync= domain_sync))
+        datasets.append(getattr(m, attr)(opt, name=d, mode=opt.mode, add_noise=add_noise, fine_tuning=fine_tuning))
 
-    # module_name, attr = get_module_attr(args.dataset)
+    # module_name, attr = get_module_attr(opt.dataset)
     # m = import_module('data.' + module_name.lower())
 
-    # datasets.append(getattr(m, attr)(args, name=args.dataset))
+    # datasets.append(getattr(m, attr)(opt, name=opt.dataset))
 
     train_ds = MyConcatDataset(datasets)
-    train_len = int(args.train_ratio * len(train_ds))
+    train_len = int(opt.train_ratio * len(train_ds))
     valid_len = len(train_ds) - train_len
     train_dataset, valid_dataset = D.random_split(train_ds, lengths=[train_len, valid_len])
     
     print("Number of train dataset samples:", train_len)
     print("Number of valid dataset samples:", valid_len)
-    print("Threading {}".format(args.n_threads))
+    print("Threading {}".format(opt.n_threads))
 
     train_data_loader = DataLoader(dataset=train_dataset,
-                                batch_size=args.batch_size,
+                                batch_size=opt.batch_size,
                                 shuffle=True,
                                 pin_memory=True,
-                                num_workers=args.n_threads)
+                                num_workers=opt.n_threads)
     valid_data_loader = DataLoader(dataset=valid_dataset,
-                                batch_size=args.batch_size,
+                                batch_size=opt.batch_size,
                                 shuffle=False,
                                 pin_memory=True,
-                                num_workers=args.n_threads)
+                                num_workers=opt.n_threads)
 
     return train_data_loader, valid_data_loader
 

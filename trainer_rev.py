@@ -21,7 +21,6 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         optimizer = optim.Adam(net.denoiser.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
         optimizer_dc = optim.Adam(net.domain_discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay_dc)
         print("===> Use Adam optimizer")
-
     elif opt.optimizer == 'rms':
         optimizer = optim.RMSprop(net.denoiser.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay)
         optimizer_dc = optim.RMSprop(net.domain_discriminator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay)
@@ -29,7 +28,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
     if opt.resume:
         print("Choose Model checkpoint")
-        opt.start_epoch, net, optimizer = load_model(opt, net, optimizer=optimizer)
+        opt.start_epoch, net, optimizers = load_model(opt, net, optimizer=[optimizer, optimizer_dc])
+        optimizer, optimizer_dc = optimizers[0], optimizers[1]
     else : 
         set_checkpoint_dir(opt)
 
@@ -40,9 +40,9 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5, mode='min')
     scheduler_dc = ReduceLROnPlateau(optimizer_dc, factor=0.5, patience=5, mode='min')
 
-    if opt.start_epoch == 1:
-        keys = ['loss', 'lloss', 'ploss', 'revloss', 'dcloss', 'src_psnr', 'nsrc_psnr', 'trg_psnr', 'ntrg_psnr']
-        record = Record(opt, train_length=len(src_t_loader), valid_length=len(src_v_loader), keys=keys)
+    # if opt.start_epoch == 1:
+    keys = ['loss', 'lloss', 'ploss', 'revloss', 'dcloss', 'src_psnr', 'nsrc_psnr', 'trg_psnr', 'ntrg_psnr']
+    record = Record(opt, train_length=len(src_t_loader), valid_length=len(src_v_loader), keys=keys)
 
     mse_criterion = nn.MSELoss()
     if opt.use_cuda:
@@ -143,7 +143,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         scheduler_dc.step(mse_loss)
 
         record.print_average(mode='valid')
-        record.save_checkpoint(net, optimizer, save_criterion='trg_psnr')
+        record.save_checkpoint(net, [optimizer, optimizer_dc], save_criterion='trg_psnr')
         record.write_log()
 
 

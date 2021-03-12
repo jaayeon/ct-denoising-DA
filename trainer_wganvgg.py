@@ -25,7 +25,8 @@ def run_train(opt, training_dataloader, valid_dataloader):
     
     if opt.resume:
         #not possible
-        opt.start_epoch, net, optimizer_g = load_model(opt, net, optimizer=optimizer_g)
+        opt.start_epoch, net, optimizers = load_model(opt, net, optimizer=[optimizer_g, optimizer_d])
+        optimizer_g, optimizer_d = optimizers[0], optimizers[1]
     else:
         set_checkpoint_dir(opt)
     
@@ -39,9 +40,8 @@ def run_train(opt, training_dataloader, valid_dataloader):
     # scheduler = StepLR(optimizer_g, step_size=50, gamma=0.5)
 
     # Create log file when training start
-    if opt.start_epoch == 1:
-        keys = ['gloss', 'advloss', 'lloss', 'ploss', 'dloss', 'psnr', 'npsnr']
-        record = Record(opt, train_length=len(training_dataloader), valid_length=len(valid_dataloader), keys=keys)
+    keys = ['gloss', 'advloss', 'lloss', 'ploss', 'dloss', 'psnr', 'npsnr']
+    record = Record(opt, train_length=len(training_dataloader), valid_length=len(valid_dataloader), keys=keys)
     
     dataloader = {
         'train': training_dataloader,
@@ -108,5 +108,5 @@ def run_train(opt, training_dataloader, valid_dataloader):
 
         scheduler_g.step(mse_loss)
         scheduler_d.step(mse_loss)
-        record.save_checkpoint(net, optimizer_g, save_criterion='psnr')
+        record.save_checkpoint(net, [optimizer_g, optimizer_d], save_criterion='psnr')
         record.write_log()

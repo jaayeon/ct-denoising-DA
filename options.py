@@ -50,8 +50,7 @@ parser.add_argument('--source', type=str, default='ge', choices=['lp-mayo', 'pig
                     help='Specify dataset name for source dataset (not for base)')
 parser.add_argument('--target', type=str, default='mayo', choices=['lp-mayo', 'piglet', 'mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for target dataset (not for base)')
-parser.add_argument('--domain_sync', type=str, default=None, choices=[None, 'ref2trg', 'out2src'])
-parser.add_argument('--fake_dir', type=str, default=None, help='specify the fake source directory base name(domain_sync : ref2trg, out2src)')
+parser.add_argument('--fine_tuning', type=str, default=None, help='dir ref path of fine tuning dataset ex)../../data/denoising/test/mayo or .../test/mayo/full_1mm/L067')
 parser.add_argument('--train_datasets', nargs='+', default=None,
                     choices=['mayo','lp-mayo','piglet', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for base, default=source')
