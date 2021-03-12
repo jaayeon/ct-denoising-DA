@@ -10,10 +10,10 @@ from data.patchdata import PatchData
 from data import common
 
 class Mayo(PatchData):
-    def __init__(self, args, name='mayo', mode='train', add_noise=None, domain_sync=None, benchmark=False):
+    def __init__(self, args, name='mayo', mode='train', add_noise=None, fine_tuning=None, benchmark=False):
         self.thickness = args.thickness
         super(Mayo, self).__init__(
-            args, name=name, mode=mode, add_noise=add_noise, domain_sync=domain_sync, benchmark=benchmark
+            args, name=name, mode=mode, add_noise=add_noise, fine_tuning=fine_tuning, benchmark=benchmark
         )
         # Mayo specific
         
@@ -31,8 +31,14 @@ class Mayo(PatchData):
     def _set_filesystem(self, data_dir):
         super(Mayo, self)._set_filesystem(data_dir)
 
-        # full_dose = 'full_{}mm'.format(self.thickness)
-        # quarter_dose = 'quarter_{}mm'.format(self.thickness)
+        if self.fine_tuning is not None : 
+            if self.fine_tuning.split('/')[-1] == self.dataset:
+                pass
+            else : 
+                self.dir_hr = self.apath
+                self.dir_lr = self.apath.replace('full', 'quarter')
+                return
+
 
         if self.thickness == 0:
             full_dose = 'full_*mm'
@@ -46,10 +52,4 @@ class Mayo(PatchData):
             self.dir_hr = os.path.join(self.apath, full_dose)
             self.dir_lr = os.path.join(self.apath, quarter_dose)
             self.ext = ('.tiff', '.tiff')
-        
-        # full_dose = 'full_*mm'
-        # quarter_dose = 'quarter*mm'
-
-        # self.dir_hr = os.path.join(self.apath, full_dose)
-        # self.dir_lr = os.path.join(self.apath, quarter_dose)
-        # self.ext = ('.tiff', '.tiff')
+    

@@ -37,8 +37,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     
     if opt.resume:
         #not possible
-        opt.start_epoch, net, optimizer_g = load_model(opt, net, optimizer=optimizer_g)
-        raise NotImplementedError("can't load optimizer, you have to save all different optimizers")
+        opt.start_epoch, net, optimizers = load_model(opt, net, optimizer=[optimizer_g, optimizer_d, optimizer_dc, optimizer_rev])
+        optimizer_g, optimizer_d, optimizer_dc, optimizer_rev = optimizers[0], optimizers[1], optimizers[2], optimizers[3]
     else:
         set_checkpoint_dir(opt)
     
@@ -55,9 +55,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     # scheduler = StepLR(optimizer_g, step_size=50, gamma=0.5)
 
     # Create log file when training start
-    if opt.start_epoch == 1:
-        keys=['gloss', 'advloss', 'lloss', 'ploss', 'revloss', 'dcloss', 'dloss', 'src_psnr', 'nsrc_psnr', 'trg_psnr', 'ntrg_psnr']
-        record = Record(opt, train_length=len(src_t_loader), valid_length=len(src_v_loader), keys=keys)
+    keys=['gloss', 'advloss', 'lloss', 'ploss', 'revloss', 'dcloss', 'dloss', 'src_psnr', 'nsrc_psnr', 'trg_psnr', 'ntrg_psnr']
+    record = Record(opt, train_length=len(src_t_loader), valid_length=len(src_v_loader), keys=keys)
 
     mse_criterion = nn.MSELoss()
     if opt.use_cuda:
@@ -174,5 +173,5 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         scheduler_rev.step(mse_loss)
 
         record.print_average(mode='valid')
-        record.save_checkpoint(net, optimizer_g, save_criterion='trg_psnr')
+        record.save_checkpoint(net, [optimizer_g, optimizer_d, optimizer_dc, optimizer_rev], save_criterion='trg_psnr')
         record.write_log()

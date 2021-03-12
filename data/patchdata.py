@@ -15,17 +15,17 @@ import torch
 import torch.utils.data as data
 
 class PatchData(data.Dataset):
-    def __init__(self, opt, name='', mode='train', add_noise=None, domain_sync=None, benchmark=False):
+    def __init__(self, opt, name='', mode='train', add_noise=None, fine_tuning=None, benchmark=False):
         self.opt = opt
         self.dataset = name
         self.in_mem = opt.in_mem
 
         self.n_channels = opt.n_channels
 
+        self.fine_tuning = fine_tuning
         self.mode = mode
         self.benchmark = benchmark
 
-        self.domain_sync = domain_sync
         self.add_noise = True if add_noise else False
         self.noise = opt.noise
         self.scale = opt.scale #noise scale
@@ -100,7 +100,10 @@ class PatchData(data.Dataset):
         return names_hr, names_lr
 
     def _set_filesystem(self, data_dir):
-        self.apath = os.path.join(data_dir, self.mode, self.dataset)
+        if self.fine_tuning:
+            self.apath = self.fine_tuning
+        else : 
+            self.apath = os.path.join(data_dir, self.mode, self.dataset)
         self.dir_hr = os.path.join(self.apath, 'hr')
         self.dir_lr = os.path.join(self.apath, 'lr')
         
@@ -130,7 +133,7 @@ class PatchData(data.Dataset):
             #choose noise
             num_noise_modes = len(self.noise)
             noise = self.noise[random.randint(0,num_noise_modes-1)]
-            #set parameter index (for mayo 1mm, 3mm)
+            #set parameter index (for mayo 1mm-0, 3mm-1, else-0)
             param_idx = 1 if '3mm' in filename else 0 
             nimg = self.make_noise(pair[0], noise=noise, pidx=param_idx, scale=self.scale)
             ntensor = common.np2Tensor(nimg, n_channels=self.n_channels)
@@ -221,7 +224,7 @@ class PatchData(data.Dataset):
         return lr, hr
 
     def make_noise(self, img, noise='p', pidx=0, scale=1):
-        scale = random.randint(1*2,scale*2)/2
+        scale = random.randint(1,scale*2)/2
         if noise=='p':
             params = self.opt.p_lam
             nimg = np.random.poisson(params[pidx]*img)/float(params[pidx])

@@ -10,10 +10,10 @@ from data.patchdata import PatchData
 from data import common
 
 class LPMAYO(PatchData):
-    def __init__(self, args, name='lp-mayo', mode='train', add_noise=None, domain_sync=None, benchmark=False):
+    def __init__(self, args, name='lp-mayo', mode='train', add_noise=None, fine_tuning=None, benchmark=False):
         self.body_part = args.body_part
         super(LPMAYO, self).__init__(
-            args, name=name, mode=mode, add_noise=add_noise, domain_sync=domain_sync, benchmark=benchmark
+            args, name=name, mode=mode, add_noise=add_noise, fine_tuning=fine_tuning, benchmark=benchmark
         )
         # LPMAYO specific
         
@@ -47,15 +47,8 @@ class LPMAYO(PatchData):
     def _set_filesystem(self, data_dir):
         super(LPMAYO, self)._set_filesystem(data_dir)
 
-        if self.domain_sync == 'ref2trg':
-            self.dir_hr = os.path.join(self.apath, 'fake_full')
-            self.dir_lr = os.path.join(self.apath, 'fake_low')
-        elif self.domain_sync == 'out2src':
-            self.dir_hr = os.path.join(self.apath, 'full')
-            self.dir_lr = os.path.join(self.apath, 'fake_low')
-        else : #self.domain_sync = 'None'
-            self.dir_hr = os.path.join(self.apath, 'full')
-            self.dir_lr = os.path.join(self.apath, 'low')
+        self.dir_hr = os.path.join(self.apath, 'full')
+        self.dir_lr = os.path.join(self.apath, 'low')
         self.ext = ('.tiff', '.tiff')
 
         print('[**] Set File System : \ndir_hr {} \ndir_lr {}'.format(self.dir_hr, self.dir_lr))

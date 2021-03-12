@@ -23,7 +23,8 @@ def run_train(opt, training_dataloader, valid_dataloader):
         print("===> Use Adam optimizer")
     
     if opt.resume:
-        opt.start_epoch, net, optimizer = load_model(opt, net, optimizer=optimizer)
+        opt.start_epoch, net, optimizers = load_model(opt, net, optimizer=[optimizer])
+        optimizer = optimizers[0]
     else:
         set_checkpoint_dir(opt)
 
@@ -41,9 +42,8 @@ def run_train(opt, training_dataloader, valid_dataloader):
     # scheduler = StepLR(optimizer, step_size=50, gamma=0.5)
 
     # Create log file when training start
-    if opt.start_epoch == 1:
-        keys = ['loss', 'lloss', 'ploss', 'psnr', 'npsnr']
-        record = Record(opt, train_length=len(training_dataloader), valid_length=len(valid_dataloader), keys=keys)
+    keys = ['loss', 'lloss', 'ploss', 'psnr', 'npsnr']
+    record = Record(opt, train_length=len(training_dataloader), valid_length=len(valid_dataloader), keys=keys)
 
     dataloader = {
         'train': training_dataloader,
@@ -95,7 +95,7 @@ def run_train(opt, training_dataloader, valid_dataloader):
             record.print_average(mode=phase)
 
         scheduler.step(mse_loss)
-        record.save_checkpoint(net, optimizer, save_criterion='psnr')
+        record.save_checkpoint(net, [optimizer], save_criterion='psnr')
         record.write_log()
 
 
