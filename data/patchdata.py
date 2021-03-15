@@ -6,6 +6,7 @@ import pickle
 from skimage.io import imsave, imread
 from skimage.external.tifffile import imsave as t_imsave
 from skimage.external.tifffile import imread as t_imread
+from skimage.restoration import denoise_nl_means, estimate_sigma
 
 from data import common
 
@@ -226,6 +227,7 @@ class PatchData(data.Dataset):
 
     def make_noise(self, img, noise='p', pidx=0, scale_max=3, scale_min=0.5):
         scale = random.randint(scale_min*2,scale_max*2)/2
+        sigma_est = np.mean(estimate_sigma(img, multichannel=False))
         if noise=='p':
             params = self.opt.p_lam
             nimg = np.random.poisson(params[pidx]*img)/float(params[pidx])
@@ -242,4 +244,9 @@ class PatchData(data.Dataset):
                 nimg = img + noise/params[1]/10 #amplify noise.. 0.1-> 1, 0.05->2, 0.01->10
             else : 
                 nimg = img + noise
+        elif noise=='nlm':
+            clean = denoise_nl_means(img, h=0.8*(10^15)*sigma_est, fast_mode=True, 
+                                    patch_size=5, patch_distance=13, multichannel=False)
+            noise = img-clean
+            nimg = img + scale*noise
         return nimg
