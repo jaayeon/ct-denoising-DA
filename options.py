@@ -135,6 +135,7 @@ parser.add_argument('--style_stage', type=int, default=4, choices=[1,2,3,4,5,6],
 parser.add_argument('--content_randomization', default=False, action='store_true')
 parser.add_argument('--sagnet', default=False, action='store_true', 
                     help='only update batch normalization parameters in rev_loss')
+#parser.add_argument('--nl_block', default=False, action='store_ture') # not yet
 
 
 parser.add_argument('--test_every', type=int, default=1000,
