@@ -16,14 +16,13 @@ import torch
 import torch.utils.data as data
 
 class PatchData(data.Dataset):
-    def __init__(self, opt, name='', mode='train', add_noise=None, fine_tuning=None, benchmark=False):
+    def __init__(self, opt, name='', mode='train', add_noise=None, benchmark=False):
         self.opt = opt
         self.dataset = name
         self.in_mem = opt.in_mem
 
         self.n_channels = opt.n_channels
 
-        self.fine_tuning = fine_tuning
         self.mode = mode
         self.benchmark = benchmark
 
@@ -47,7 +46,7 @@ class PatchData(data.Dataset):
             self.dir_hr = os.path.join(path_bin, self.dir_hr.split('/')[-1])
             self.dir_lr = os.path.join(path_bin, self.dir_lr.split('/')[-1])
             self.ext = ('.pt', '.pt')
- 
+
             self.images_hr, self.images_lr = self._scan()
             print("[*]RESET FILE SYSTEM to PT FOLDER")
             print("dir_hr:", os.path.abspath(self.dir_hr))
@@ -102,10 +101,7 @@ class PatchData(data.Dataset):
         return names_hr, names_lr
 
     def _set_filesystem(self, data_dir):
-        if self.fine_tuning:
-            self.apath = self.fine_tuning
-        else : 
-            self.apath = os.path.join(data_dir, self.mode, self.dataset)
+        self.apath = os.path.join(data_dir, self.mode, self.dataset)
         self.dir_hr = os.path.join(self.apath, 'hr')
         self.dir_lr = os.path.join(self.apath, 'lr')
         
@@ -234,18 +230,19 @@ class PatchData(data.Dataset):
             nimg = img + scale*(nimg-img)
         elif noise=='g':
             params = self.opt.g_std
-            noise = np.random.normal(loc=0, scale=params[pidx], size=img.shape).astype(float)
-            nimg = img + scale*noise
+            # noise = np.random.normal(loc=0, scale=params[pidx], size=img.shape).astype(float)
+            noise = np.random.normal(loc=0, scale=scale*sigma_est*self.opt.ratio_std, size=img.shape).astype(float)
+            nimg = img + noise
         elif noise=='bf':
             params = self.opt.b_dcs
-            clean = cv2.bilateralFilter(img, int(params[0]), params[1], params[2])
+            clean = cv2.bilateralFilter(img, int(params[0]), scale*sigma_est*self.opt.ratio_std, params[2])
             noise = img-clean
             if params[1]<0.1:
                 nimg = img + noise/params[1]/10 #amplify noise.. 0.1-> 1, 0.05->2, 0.01->10
             else : 
                 nimg = img + noise
         elif noise=='nlm':
-            clean = denoise_nl_means(img, h=0.8*(10^15)*sigma_est, fast_mode=True, 
+            clean = denoise_nl_means(img, h=sigma_est*self.opt.ratio_std, fast_mode=True, 
                                     patch_size=5, patch_distance=13, multichannel=False)
             noise = img-clean
             nimg = img + scale*noise

@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.models import vgg19
+import random
 
 def set_model(opt):
 
@@ -61,6 +62,7 @@ class FeatureExtractor(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self, input_size, input_channels, class_num=1):
         super(Discriminator, self).__init__()
+        self.input_size = input_size
         def conv_output_size(input_size, kernel_size_list, stride_list):
             n=input_size
             for k, s in zip(kernel_size_list, stride_list):
@@ -88,8 +90,17 @@ class Discriminator(nn.Module):
         self.lrelu = nn.LeakyReLU()
 
     def forward(self, x):
+        x = self.random_crop(x)
         out = self.net(x)
         out = out.view(-1, 256*self.output_size*self.output_size)
         out = self.lrelu(self.fc1(out))
         out = self.fc2(out)
         return out
+
+    def random_crop(self, x):
+        size = x.size()[-1] #b,c,h,w
+        if size == self.input_size:
+            return x
+        rh = random.randint(0, size-self.input_size)
+        rw = random.randint(0, size-self.input_size)
+        return x[:,:,rh:rh+self.input_size, rw:rw+self.input_size]

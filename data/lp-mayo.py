@@ -10,10 +10,10 @@ from data.patchdata import PatchData
 from data import common
 
 class LPMAYO(PatchData):
-    def __init__(self, args, name='lp-mayo', mode='train', add_noise=None, fine_tuning=None, benchmark=False):
+    def __init__(self, args, name='lp-mayo', mode='train', add_noise=None, benchmark=False):
         self.body_part = args.body_part
         super(LPMAYO, self).__init__(
-            args, name=name, mode=mode, add_noise=add_noise, fine_tuning=fine_tuning, benchmark=benchmark
+            args, name=name, mode=mode, add_noise=add_noise, benchmark=benchmark
         )
         # LPMAYO specific
         

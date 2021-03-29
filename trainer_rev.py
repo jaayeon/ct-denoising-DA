@@ -30,6 +30,9 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         print("Choose Model checkpoint")
         opt.start_epoch, net, optimizers = load_model(opt, net, optimizer=[optimizer, optimizer_dc])
         optimizer, optimizer_dc = optimizers[0], optimizers[1]
+    elif opt.pretrained : 
+        net = load_model(opt, net)
+        set_checkpoint_dir(opt)
     else : 
         set_checkpoint_dir(opt)
 

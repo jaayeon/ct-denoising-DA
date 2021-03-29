@@ -73,7 +73,7 @@ def load_config(opt):
 
 
 def load_model(opt, model, optimizer=None):
-    if opt.mode == 'train':
+    if opt.mode == 'train' or 'fine_tuning':
         checkpoint_dir = select_checkpoint_dir(opt)
     elif opt.mode == 'test':
         checkpoint_dir = opt.checkpoint_dir
@@ -117,10 +117,14 @@ def load_model(opt, model, optimizer=None):
 
     print("Using epoch_num:", n_epoch)
     
-    opt.checkpoint_dir = checkpoint_dir
+    if not opt.pretrained:
+        opt.checkpoint_dir = checkpoint_dir
     print(model)
-    if opt.mode == 'train':
-        return n_epoch+1, model, optimizer
+    if opt.mode == 'train' or opt.mode == 'fine_tuning':
+        if opt.pretrained:
+            return model
+        else : 
+            return n_epoch+1, model, optimizer
     else : 
         if opt.way == 'wgan' or opt.way == 'wganrev':
             return n_epoch+1, model.generator, optimizer

@@ -43,7 +43,7 @@ def get_module_attr(dataset):
 
 
 
-def get_train_valid_dataloader(opt, train_datasets=None, add_noise=None, fine_tuning=None):
+def get_train_valid_dataloader(opt, train_datasets=None, add_noise=None):
     datasets = []
     if train_datasets == None:
         train_datasets = opt.train_datasets
@@ -54,7 +54,7 @@ def get_train_valid_dataloader(opt, train_datasets=None, add_noise=None, fine_tu
         # module_name = d
         module_name, attr = get_module_attr(d)
         m = import_module('data.' + module_name.lower())
-        datasets.append(getattr(m, attr)(opt, name=d, mode=opt.mode, add_noise=add_noise, fine_tuning=fine_tuning))
+        datasets.append(getattr(m, attr)(opt, name=d, mode=opt.mode, add_noise=add_noise))
 
     # module_name, attr = get_module_attr(opt.dataset)
     # m = import_module('data.' + module_name.lower())

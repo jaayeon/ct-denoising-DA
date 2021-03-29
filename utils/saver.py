@@ -31,7 +31,7 @@ class Record():
             os.makedirs(self.checkpoint_dir)
 
         if self.epoch == 1:
-            with open(self.log_file, mode='w') as f:
+            with open(self.log_file, mode='w', newline='\n') as f:
                 f.write('epoch, {}, {}\n'.format('-t, '.join(self.keys), '-v, '.join(self.keys)))
 
         with open(self.opt_file, 'w') as f:

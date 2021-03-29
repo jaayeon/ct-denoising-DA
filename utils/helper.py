@@ -70,6 +70,9 @@ def set_test_dir(opt):
 
     if opt.ensemble:
         test_dir_opt = test_dir_opt + "-ensemble"
+    
+    if opt.mode == 'fine_tuning':
+        test_dir_opt = test_dir_opt + '-fine_tuning'
 
     #for linux server
     opt.test_result_dir = change_os_slash(opt.test_result_dir)

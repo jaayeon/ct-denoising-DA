@@ -11,7 +11,7 @@ test_result_dir = os.path.join(data_dir, 'test_result_DA')
 
 parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
-parser.add_argument('--mode', type=str, default='train', choices=['train', 'test'])
+parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'fine_tuning'])
 parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr'])
 parser.add_argument('--way', type=str, default='wganrev', choices=['base', 'rev', 'wgan', 'wganrev'])
 
@@ -50,7 +50,7 @@ parser.add_argument('--source', type=str, default='ge', choices=['lp-mayo', 'pig
                     help='Specify dataset name for source dataset (not for base)')
 parser.add_argument('--target', type=str, default='mayo', choices=['lp-mayo', 'piglet', 'mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for target dataset (not for base)')
-parser.add_argument('--fine_tuning', type=str, default=None, help='dir ref path of fine tuning dataset ex)../../data/denoising/test/mayo or .../test/mayo/full_1mm/L067')
+parser.add_argument('--fine_tuning_num', type=int, default=10, help='back prop num for each image')
 parser.add_argument('--train_datasets', nargs='+', default=None,
                     choices=['mayo','lp-mayo','piglet', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for base, default=source')
@@ -86,6 +86,7 @@ parser.add_argument('--b_dcs', type=float, nargs='+', default=[10, 0.01, 1],
                     help='bilateral filter parameters.The diameter of each pixel neighborhood, Filter sigma in color space, Filter sigma in the coordinate space')
 parser.add_argument('--scale_max', type=float, default=2.0, help='scaling noise in [scale_min, scale_max]')
 parser.add_argument('--scale_min', type=float, default=0.5, help='scaling noise in [scale_min, scale_max]')
+parser.add_argument('--ratio_std', type=float, default=3.0, help='noise std/real std')
 
 # Mayo dataset specifications
 parser.add_argument('--thickness', type=int, default=0, choices=[0,1,3],
@@ -150,7 +151,8 @@ parser.add_argument('--epoch_num', type=int, default=0,
                     help='epoch number to restart')
 parser.add_argument('--ensemble', default=False, action='store_true',
                     help='self ensemble in test')
-
+parser.add_argument('--pretrained', default=False, action='store_true',
+                    help='initialize weight to pretrained model')
 
 # Optimizer specification
 parser.add_argument("--optimizer", type=str, default='adam',
