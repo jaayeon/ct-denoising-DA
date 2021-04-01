@@ -72,7 +72,9 @@ def set_test_dir(opt):
         test_dir_opt = test_dir_opt + "-ensemble"
     
     if opt.mode == 'fine_tuning':
-        test_dir_opt = test_dir_opt + '-fine_tuning'
+        dt = datetime.datetime.now()
+        date = dt.strftime("%Y%m%d-%H%M")
+        test_dir_opt = test_dir_opt + '-fine_tuning-{}'.format(date)
 
     #for linux server
     opt.test_result_dir = change_os_slash(opt.test_result_dir)

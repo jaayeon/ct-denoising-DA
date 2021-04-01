@@ -8,10 +8,8 @@ import argparse
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Add Noise in Sinogram')
-    parser.add_argument('--noise', type=str, default='poisson', choices=['poisson', 'gaussian'])
-    parser.add_argument('--p_lam', type=float, nargs='+', default=[400, 1400], help='poisson parameter, each for 1,3mm')
-    parser.add_argument('--g_std', type=float, nargs='+', default=[0.032, 0.016], help='gaussian parameter, each for 1,3mm')
+    parser = argparse.ArgumentParser(description='Add Poisson Noise in Sinogram')
+    parser.add_argument('--p_val', type=int, default=1400)
     opt = parser.parse_args()
 
     mayo_3q = glob.glob('../../data/denoising/train/mayo/forward_projection/3mm/quarter_3mm_*_fp.tif')
@@ -31,7 +29,7 @@ if __name__ == "__main__":
     for i,imgpath in enumerate(mayo_1q,1):
         print('[{}/{}] start {}'.format(i,len(mayo_1q),imgpath))
         basename = os.path.basename(imgpath)
-        nbasename = '_'.join(basename.split('_')[:-1]) + '_nfp'
+        nbasename = '_'.join(basename.split('_')[:-1]) + '_nfp_' + str(opt.p_val) ##
         nimgpath = os.path.join(n_mayo_1q,nbasename)
         if not os.path.exists(nimgpath):
             os.mkdir(nimgpath)
@@ -39,19 +37,27 @@ if __name__ == "__main__":
         img = imread(imgpath)
         for j in range(720):
             arr = img[j,:,:]
-            vals = len(np.unique(arr))
-            vals = 2**np.ceil(np.log2(vals))
-            narr = np.random.poisson(arr*vals)/float(vals)
+
+            max_val = np.max(arr)
+            min_val = np.min(arr)
+            arr_norm = (arr-min_val)/(max_val-min_val)
+            # vals = len(np.unique(arr_norm))
+            # vals = 2**np.ceil(np.log2(vals))
+            vals = opt.p_val
+            narr = np.random.poisson(arr_norm*vals)/float(vals)
+            narr = narr*(max_val-min_val)+min_val
+
             imsave(os.path.join(nimgpath, '{}_{}.tif'.format(nbasename, str(j).zfill(3))), narr.astype('float32'))
             if j%100 == 0:
                 print('...{}/{} progressed'.format(j,720))
         print('[{}/{}] save {}'.format(i,len(mayo_1q),nimgpath))
+        raise KeyboardInterrupt
 
     #3mm
     for i,imgpath in enumerate(mayo_3q,1):
         print('[{}/{}] start {}'.format(i,len(mayo_3q),imgpath))
         basename = os.path.basename(imgpath)
-        nbasename = '_'.join(basename.split('_')[:-1]) + '_nfp'
+        nbasename = '_'.join(basename.split('_')[:-1]) + '_nfp_' + str(opt.p_val) ##
         nimgpath = os.path.join(n_mayo_3q,nbasename)
         if not os.path.exists(nimgpath):
             os.mkdir(nimgpath)
@@ -59,9 +65,16 @@ if __name__ == "__main__":
         img = imread(imgpath)
         for j in range(720):
             arr = img[j,:,:]
-            vals = len(np.unique(arr))
+
+            max_val = np.max(arr)
+            min_val = np.min(arr)
+            arr_norm = (arr-min_val)/(max_val-min_val)
+            vals = len(np.unique(arr_norm))
             vals = 2**np.ceil(np.log2(vals))
-            narr = np.random.poisson(arr*vals)/float(vals)
+            # vals = opt.p_val
+            narr = np.random.poisson(arr_norm*vals)/float(vals)
+            narr = narr*(max_val-min_val)+min_val
+
             imsave(os.path.join(nimgpath, '{}_{}.tif'.format(nbasename, str(j).zfill(3))), narr.astype('float32'))
             if j%100 == 0:
                 print('...{}/{} progressed'.format(j,720))

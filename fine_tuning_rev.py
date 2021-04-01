@@ -18,41 +18,105 @@ from models import set_model
 from skimage.external.tifffile import imsave, imread
 from skimage.restoration import denoise_nl_means, estimate_sigma
 import cv2
+import copy
 
 class Single_Image_Data(Dataset):
-    def __init__(self, iternum, imgsize, imgpath, refpath):
-        self.imgsize = imgsize
+    def __init__(self, opt, iternum, patchsize, imgpath, refpath, noise=False, crop='center', batch_size=1):
+        self.patchsize = patchsize
         self.iternum = iternum
         self.img = imread(imgpath)
         self.ref = imread(refpath)
+        self.imgsize = self.img.shape[0]
         self.transforms = transforms.Compose([transforms.ToTensor()])
+        self.add_noise = noise
+        self.crop = crop
+        self.batch_size = batch_size
 
-    def __getitem(self, idx):
+        self.scale_min = opt.scale_min
+        self.scale_max = opt.scale_max
+        self.opt = opt
+
+        self.random_rh = [random.randint(0,self.imgsize-self.patchsize) for _ in range(batch_size)]
+        self.random_rw = [random.randint(0,self.imgsize-self.patchsize) for _ in range(batch_size)]
+
+    def __getitem__(self, idx):
+        idx = int(idx%self.batch_size)
+        size = self.imgsize
         #random crop
-        size = self.img.shape[0]
-        rh = random.randint(size-self.imgsize)
-        rw = random.randint(size-self.imgsize)
-        img = self.img[rh:rh+self.imgsize, rw:rw+self.imgsize]
-        ref = self.ref[rh:rh+self.imgsize, rw:rw+self.imgsize]
+        if self.crop == 'random':
+            rh = self.random_rh[idx]
+            rw = self.random_rw[idx]
+        #center crop
+        elif self.crop == 'center':
+            rh = int((size-self.patchsize)/2)
+            rw = int((size-self.patchsize)/2)
+
+        img = self.img[rh:rh+self.patchsize, rw:rw+self.patchsize]
+        ref = self.ref[rh:rh+self.patchsize, rw:rw+self.patchsize]
+
+        if self.add_noise:
+            nimg = self.make_noise(img)
+            nimg = Image.fromarray(nimg)
+            nimgtensor = self.transforms(nimg)
+            nimgtensor = nimgtensor.type(torch.FloatTensor)
+
         #img2tensor
-        img = Image.fromarray(img)
-        ref = Image.fromarray(ref)
+        # img = Image.fromarray(img)
+        # ref = Image.fromarray(ref)
         imgtensor = self.transforms(img)
         reftensor = self.transforms(ref)
 
         imgtensor = imgtensor.type(torch.FloatTensor)
         reftensor = reftensor.type(torch.FloatTensor)
-        return imgtensor, reftensor
+
+        if self.add_noise:
+            return imgtensor, reftensor, nimgtensor
+        else:
+            return imgtensor, reftensor
 
     def __len__(self):
-        return self.iternum
+        return self.iternum*self.batch_size
 
     def get_tensor(self):
+        h,w = self.img.shape
         imgtensor = self.transforms(self.img)
         reftensor = self.transforms(self.ref)
-        imgtensor = imgtensor.reshape(1, imgtensor.size())
-        reftensor = reftensor.reshape(1, reftensor.size())
+        imgtensor = imgtensor.reshape(1,1,h,w)
+        reftensor = reftensor.reshape(1,1,h,w)
         return imgtensor, reftensor
+
+    def make_noise(self, img):
+
+        num_noise_modes = len(self.opt.noise)
+        noise = self.opt.noise[random.randint(0,num_noise_modes-1)]
+        pidx = 1 if self.opt.thickness==3 else 0
+
+        scale = random.randint(self.scale_min*2,self.scale_max*2)/2
+        sigma_est = np.mean(estimate_sigma(img, multichannel=False))
+
+        if noise=='p':
+            params = self.opt.p_lam
+            nimg = np.random.poisson(params[pidx]*img)/float(params[pidx])
+            nimg = img + scale*(nimg-img)
+        elif noise=='g':
+            params = self.opt.g_std
+            # noise = np.random.normal(loc=0, scale=params[pidx], size=img.shape).astype(float)
+            noise = np.random.normal(loc=0, scale=scale*sigma_est*self.opt.ratio_std, size=img.shape).astype(float)
+            nimg = img + noise
+        elif noise=='bf':
+            params = self.opt.b_dcs
+            clean = cv2.bilateralFilter(img, int(params[0]), scale*sigma_est*self.opt.ratio_std, params[2])
+            noise = img-clean
+            if params[1]<0.1:
+                nimg = img + noise/params[1]/10 #amplify noise.. 0.1-> 1, 0.05->2, 0.01->10
+            else : 
+                nimg = img + noise
+        elif noise=='nlm':
+            clean = denoise_nl_means(img, h=sigma_est*self.opt.ratio_std, fast_mode=True, 
+                                    patch_size=5, patch_distance=13, multichannel=False)
+            noise = img-clean
+            nimg = img + scale*noise
+        return nimg
 
 
 def run_train(opt, source, target):
@@ -60,20 +124,12 @@ def run_train(opt, source, target):
     print('Initialize networks for fine tuning')
     net = set_model(opt)
     print(net)
-    
-    print("Setting Optimizer")
-    if opt.optimizer == 'adam':
-        optimizer = optim.Adam(net.denoiser.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
-        optimizer_dc = optim.Adam(net.domain_discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay_dc)
-        print("===> Use Adam optimizer")
-    elif opt.optimizer == 'rms':
-        optimizer = optim.RMSprop(net.denoiser.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay)
-        optimizer_dc = optim.RMSprop(net.domain_discriminator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay)
-        print("===> Use RMSprop optimizer")
 
     if opt.pretrained : 
-        net = load_model(opt, net)
-        set_checkpoint_dir(opt)
+        net, checkpoint = load_model(opt, net)
+        # set_checkpoint_dir(opt)
+        # net_init = load_model(opt, net)
+        # net.load_state_dict(copy.deepcopy(net_init.state_dict()))
     else : 
         raise KeyboardInterrupt('--mode fine_tuning has to be used with --pretrained option')
 
@@ -89,12 +145,11 @@ def run_train(opt, source, target):
         net.denoiser = nn.DataParallel(net.denoiser)
         net.domain_discriminator = nn.DataParallel(net.domain_discriminator)
 
-    scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5, mode='min')
-    scheduler_dc = ReduceLROnPlateau(optimizer_dc, factor=0.5, patience=5, mode='min')
-
     mse_criterion = nn.MSELoss()
+    mae_criterion = nn.L1Loss()
     if opt.use_cuda:
         mse_criterion = mse_criterion.to(opt.device)
+        mae_criterion = mae_criterion.to(opt.device)
 
     src_input_list_1 = glob.glob(os.path.join(opt.train_dir, 'phantom', opt.source, 'chest', '{}*_crop'.format(opt.mA_low), '*.tiff'))
     src_ref_list_1 = glob.glob(os.path.join(opt.train_dir, 'phantom', opt.source, 'chest', '{}*_crop'.format(opt.mA_full), '*.tiff'))
@@ -139,25 +194,75 @@ def run_train(opt, source, target):
 
             print("[{}/{}] processing {}".format(num+1, num_test_img, os.path.abspath(trg_input_path)))
 
-            # trg_input_img = imread(trg_input_path)
-            # trg_ref_img = imread(trg_ref_path)
-
             ridx = np.random.randint(num_src_img)
-            # src_input_img = imread(src_input_list[ridx])
-            # src_ref_img = imread(src_ref_list[ridx])
             
-            trg_dataset = Single_Image_Data(opt.fine_tuning_num, opt.patch_size, trg_input_path, trg_ref_path)
-            src_dataset = Single_Image_Data(opt.fine_tuning_num, opt.path_size, src_input_list[ridx], src_ref_list[ridx])
+            trg_dataset = Single_Image_Data(opt, opt.fine_tuning_num, opt.patch_size, trg_input_path, trg_ref_path, noise=True, crop=opt.crop, batch_size=opt.batch_size)
+            src_dataset = Single_Image_Data(opt, opt.fine_tuning_num, opt.patch_size, src_input_list[ridx], src_ref_list[ridx], crop=opt.crop, batch_size=opt.batch_size)
             
-            trg_loader = DataLoader(dataset=trg_dataset, batch_size=1)
-            src_loader = DataLoader(dataset=src_dataset, batch_size=1)
+            trg_loader = DataLoader(dataset=trg_dataset, batch_size=opt.batch_size)
+            src_loader = DataLoader(dataset=src_dataset, batch_size=opt.batch_size)
 
-            # trg_out_tensor, net, optimizer, optimizer_dc, n_psnr, n_ssim,  psnr, ssim = fine_tuning(opt, trg_loader, src_loader, net, optimizer, optimizer_dc)
-            net, optimizer, optimizer_dc = fine_tuning(opt, trg_loader, src_loader, net, optimizer, optimizer_dc)
-            trg_input_tensor, trg_ref_tensor = trg_dataset.get_tensor()
-            net.denoiser.eval()
-            trg_out_tensor = net.denoiser(trg_input_tensor)
-            _, n_psnr, n_ssim,  _, psnr, ssim = calc_metrics(trg_input_tensor, trg_out_tensor, trg_ref_tensor) 
+            #initialize net, optimizer
+            # net.load_state_dict(copy.deepcopy(net_init.state_dict()))
+            net.load_state_dict(checkpoint['model'])
+            optimizer = optim.Adam(net.denoiser.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
+            optimizer_dc = optim.Adam(net.domain_discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay_dc)
+            net.denoiser.train()
+            net.domain_discriminator.eval()
+
+            #before fine_tuning
+            with torch.no_grad():
+                trg_img_tensor, trg_ref_tensor = trg_dataset.get_tensor()
+                trg_img_tensor = trg_img_tensor.to(opt.device)
+                trg_ref_tensor = trg_ref_tensor.to(opt.device)
+                trg_out_tensor,_ = net.denoiser(trg_img_tensor)
+                _, n_psnr, n_ssim,  _, psnr, ssim = calc_metrics(trg_img_tensor, trg_out_tensor, trg_ref_tensor) 
+
+            best_loss = 10000
+            fine_tuned = False
+            #fine_tuning for patch imgs
+            for idx, data in enumerate(zip(src_loader, trg_loader)):
+                src_input_tensor, src_ref_tensor = data[0][0].to(opt.device), data[0][1].to(opt.device)
+                trg_input_tensor, _ , trg_noise_tensor = data[1][0].to(opt.device), data[1][1].to(opt.device), data[1][2].to(opt.device)
+
+                #domain classifier
+                # optimizer_dc.zero_grad()
+                # net.domain_discriminator.zero_grad()
+                # dc_loss = net.dc_loss(src_input_tensor, src_ref_tensor, trg_input_tensor)
+                # dc_loss.backward()
+                # optimizer_dc.step()
+                    
+                #denoiser by src%trg_noise
+                # optimizer.zero_grad()
+                # net.denoiser.zero_grad()
+                # loss, l_loss, p_loss, rev_loss = net.g_loss(src_input_tensor, trg_input_tensor, src_ref_tensor, perceptual=True, trg_noise=trg_noise_tensor, return_losses=True)
+                # loss.backward()
+                # optimizer.step()
+                # print('loss : {:.6f}, l_loss : {:.6f}, p_loss : {:.6f}, rev_loss : {:.6f}'.format(loss.item(), l_loss.item(), p_loss.item(), rev_loss.item()))
+
+                #denoiser by only trg_noise
+                optimizer.zero_grad()
+                net.denoiser.zero_grad()
+                trg_patch_tensor, _ = net.denoiser(trg_noise_tensor)
+                loss = mse_criterion(trg_patch_tensor, trg_input_tensor)
+                if loss < best_loss:
+                    best_loss = loss
+                    #test original img
+                    with torch.no_grad():
+                        trg_out_tensor,_ = net.denoiser(trg_img_tensor)
+                        _, n_psnr, n_ssim,  _, psnr, ssim = calc_metrics(trg_img_tensor, trg_out_tensor, trg_ref_tensor) 
+                    print('--->#{} updated! loss : {:.6f}'.format(idx, loss.item()))
+
+                loss.backward()
+                optimizer.step()
+
+            #test original img
+            # with torch.no_grad():
+            #     trg_input_tensor, trg_ref_tensor = trg_dataset.get_tensor()
+            #     trg_input_tensor = trg_input_tensor.to(opt.device)
+            #     trg_ref_tensor = trg_ref_tensor.to(opt.device)
+            #     trg_out_tensor,_ = net.denoiser(trg_input_tensor)
+            #     _, n_psnr, n_ssim,  _, psnr, ssim = calc_metrics(trg_input_tensor, trg_out_tensor, trg_ref_tensor) 
 
 
             out_img_path = os.path.join(opt.test_result_dir, img_name)
@@ -165,11 +270,11 @@ def run_train(opt, source, target):
 
             #only for gray scale img
             if opt.use_cuda:
-                trg_input_img = trg_input_tensor[0,0,:,:].to('cpu').detach().numpy()
+                trg_input_img = trg_img_tensor[0,0,:,:].to('cpu').detach().numpy()
                 trg_ref_img = trg_ref_tensor[0,0,:,:].to('cpu').detach().numpy()
                 trg_out_img = trg_out_tensor[0,0,:,:].to('cpu').detach().numpy()
             else : 
-                trg_input_img = trg_input_tensor[0,0,:,:].detach().numpy()
+                trg_input_img = trg_img_tensor[0,0,:,:].detach().numpy()
                 trg_ref_img = trg_ref_tensor[0,0,:,:].detach().numpy()
                 trg_out_img = trg_out_tensor[0,0,:,:].detach().numpy()
 
@@ -181,99 +286,13 @@ def run_train(opt, source, target):
             noise_avg_psnr += n_psnr
             noise_avg_ssim += n_ssim
 
+            imsave(concat_img_path, concat_img)
+            imsave(out_img_path, trg_out_img)
 
             print("** Test {:.3f}s => Image({}/{}): Noise PSNR: {:.8f}, Noise SSIM: {:.8f}, PSNR: {:.8f}, SSIM: {:.8f}".format(
                 time.time() - start_time, img_idx, num_test_img, n_psnr.item(), n_ssim.item(), psnr.item(), ssim.item()
             ))
 
-            # print("out_img.shape:", out_img.shape)
-            # print(os.path.abspath(out_img_path))
-            imsave(concat_img_path, concat_img)
-            imsave(out_img_path, trg_out_img)
-
     print(" #{:d} Test Average Noise PSNR: {:.8f}, Average Noise SSIM: {:.8f}, Average PSNR: {:.8f}, Average SSIM: {:.8f}".format(
         num, noise_avg_psnr / num, noise_avg_ssim / num, avg_psnr / num, avg_ssim / num
     ))
-
-
-def fine_tuning(opt, trg_loader, src_loader, net, optimizer, optimizer_dc):
-
-    # trg_input_tensor = torch.from_numpy(trg_input_img.reshape(1,1,trg_input_img.shape[0], trg_input_img.shape[1])).type(torch.FloatTensor).to(opt.device)
-    # trg_ref_tensor = torch.from_numpy(trg_ref_img.reshape(1,1,trg_ref_img.shape[0], trg_ref_img.shape[1])).type(torch.FloatTensor).to(opt.device)
-    # src_input_tensor = torch.from_numpy(src_input_img.reshape(1,1,src_input_img.shape[0], src_input_img.shape[1])).type(torch.FloatTensor).to(opt.device)
-    # src_ref_tensor = torch.from_numpy(src_ref_img.reshape(1,1,src_ref_img.shape[0], src_ref_img.shape[1])).type(torch.FloatTensor).to(opt.device)
-
-    # if src_input_tensor.size()[-1]<trg_input_tensor.size()[-1]:
-    #     pad = trg_input_tensor.size()[-1]-src_input_tensor.size()[-1]
-    #     padding = nn.ZeroPad2d(int(pad/2))
-    #     src_input_tensor = padding(src_input_tensor)
-    #     src_ref_tensor = padding(src_ref_tensor)
-    # elif src_input_tensor.size()[-1]>trg_input_tensor.size()[-1]:
-    #     raise NotImplementedError('crop the src_tensor')
-
-    for srcs, trgs in zip(src_loader, trg_loader):
-
-        src_input_tensor, src_ref_tensor = srcs[0].to(opt.device), srcs[1].to(opt.device)
-        trg_input_tensor, trg_ref_tensor = trgs[0].to(opt.device), trgs[1].to(opt.device)
-
-        #choose noise
-        num_noise_modes = len(opt.noise)
-        noise = opt.noise[random.randint(0,num_noise_modes-1)]
-
-        #set parameter index (for mayo 1mm-0, 3mm-1, else-0)
-        param_idx = 1 if opt.thickness==3 else 0 
-        trg_noise = make_noise(opt, trg_input_img, noise=noise, pidx=param_idx, scale_max=opt.scale_max, scale_min=opt.scale_min)
-        trg_noise_tensor = torch.from_numpy(trg_noise.reshape(1,1,trg_noise.shape[0], trg_noise.shape[1])).to(opt.device)
-        trg_noise_tensor = trg_noise_tensor.type(torch.FloatTensor).to(opt.device)
-
-        net.denoiser.train()
-        net.domain_discriminator.train()
-
-        #domain classifier
-        optimizer_dc.zero_grad()
-        net.domain_discriminator.zero_grad()
-        dc_loss = net.dc_loss(src_input_tensor, src_ref_tensor, trg_input_tensor)
-        dc_loss.backward()
-        optimizer_dc.step()
-            
-        #denoiser
-        optimizer.zero_grad()
-        net.denoiser.zero_grad()
-        loss, l_loss, p_loss, rev_loss = net.g_loss(src_input_tensor, trg_input_tensor, src_ref_tensor, perceptual=True, trg_noise=trg_noise_tensor, return_losses=True)
-        loss.backward()
-        optimizer.step()
-
-    return net, optimizer, optimizer_dc
-    # trg_out_tensor = net.trg_out
-    # _, n_psnr, n_ssim,  _, psnr, ssim = calc_metrics(trg_input_tensor, trg_out_tensor, trg_ref_tensor)
-    
-    # return trg_out_tensor, net, optimizer, optimizer_dc, n_psnr, n_ssim,  psnr, ssim
-
-
-
-def make_noise(opt,img, noise='p', pidx=0, scale_max=3, scale_min=0.5):
-        scale = random.randint(scale_min*2,scale_max*2)/2
-        sigma_est = np.mean(estimate_sigma(img, multichannel=False))
-        if noise=='p':
-            params = opt.p_lam
-            nimg = np.random.poisson(params[pidx]*img)/float(params[pidx])
-            nimg = img + scale*(nimg-img)
-        elif noise=='g':
-            params = opt.g_std
-            # noise = np.random.normal(loc=0, scale=params[pidx], size=img.shape).astype(float)
-            noise = np.random.normal(loc=0, scale=sigma_est*3*opt.std_scale, size=img.shape).astype(float)
-            nimg = img + scale*noise
-        elif noise=='bf':
-            params = opt.b_dcs
-            clean = cv2.bilateralFilter(img, int(params[0]), sigma_est*3*opt.std_scale, params[2])
-            noise = img-clean
-            if params[1]<0.1:
-                nimg = img + noise/params[1]/10 #amplify noise.. 0.1-> 1, 0.05->2, 0.01->10
-            else : 
-                nimg = img + noise
-        elif noise=='nlm':
-            clean = denoise_nl_means(img, h=3*sigma_est*opt.std_scale, fast_mode=True, 
-                                    patch_size=5, patch_distance=13, multichannel=False)
-            noise = img-clean
-            nimg = img + scale*noise
-        return nimg
