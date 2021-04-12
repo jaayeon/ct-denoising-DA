@@ -73,7 +73,7 @@ def load_config(opt):
 
 
 def load_model(opt, model, optimizer=None):
-    if opt.mode == 'train' or 'fine_tuning':
+    if opt.mode=='train' or opt.mode=='fine_tuning':
         checkpoint_dir = select_checkpoint_dir(opt)
     elif opt.mode == 'test':
         checkpoint_dir = opt.checkpoint_dir

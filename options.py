@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'fine_tuning'])
 parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr'])
-parser.add_argument('--way', type=str, default='wganrev', choices=['base', 'rev', 'wgan', 'wganrev'])
+parser.add_argument('--way', type=str, default='rev', choices=['base', 'rev', 'wgan', 'wganrev'])
 
 
 parser.add_argument('--multi_gpu', default=False, action='store_true',
@@ -51,6 +51,7 @@ parser.add_argument('--source', type=str, default='ge', choices=['lp-mayo', 'pig
 parser.add_argument('--target', type=str, default='mayo', choices=['lp-mayo', 'piglet', 'mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for target dataset (not for base)')
 parser.add_argument('--fine_tuning_num', type=int, default=10, help='back prop num for each image')
+parser.add_argument('--fine_tuning_rev', action='store_true', help='add gradient reversal in fine tuning')
 parser.add_argument('--train_datasets', nargs='+', default=None,
                     choices=['mayo','lp-mayo','piglet', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'],
                     help='Specify dataset name for base, default=source')
@@ -129,7 +130,7 @@ parser.add_argument('--rev_weight', type=float, default=0.001,
                     help='domain classifier reversal loss')
 parser.add_argument('--dc_mode', type=str, default='mse', choices=['mse', 'bce', 'wss'], 
                     help='domain classifier loss mode')
-parser.add_argument('--dc_input', type=str, default='img', choices=['img', 'noise', 'feature', 'c_img', 'c_noise', 'c_feature'],
+parser.add_argument('--dc_input', type=str, default='c_img', choices=['img', 'noise', 'feature', 'c_img', 'c_noise', 'c_feature'],
                     help = 'domain classifier input')
 parser.add_argument('--style_stage', type=int, default=4, choices=[1,2,3,4,5,6],
                     help='stage for feature which is extracted from generator to domain classifier input')

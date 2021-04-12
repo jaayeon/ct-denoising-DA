@@ -21,7 +21,7 @@ import cv2
 import copy
 
 class Single_Image_Data(Dataset):
-    def __init__(self, opt, iternum, patchsize, imgpath, refpath, noise=False, crop='center', batch_size=1):
+    def __init__(self, opt, iternum, patchsize, imgpath, refpath, noise=False, crop='random', batch_size=1):
         self.patchsize = patchsize
         self.iternum = iternum
         self.img = imread(imgpath)
@@ -86,7 +86,6 @@ class Single_Image_Data(Dataset):
         return imgtensor, reftensor
 
     def make_noise(self, img):
-
         num_noise_modes = len(self.opt.noise)
         noise = self.opt.noise[random.randint(0,num_noise_modes-1)]
         pidx = 1 if self.opt.thickness==3 else 0
@@ -95,17 +94,33 @@ class Single_Image_Data(Dataset):
         sigma_est = np.mean(estimate_sigma(img, multichannel=False))
 
         if noise=='p':
+            if scale == 0.5:
+                p_scale=4
+            elif scale == 1:
+                p_scale=1
+            elif scale == 1.5:
+                p_scale=0.5
+            elif scale == 2:
+                p_scale=0.28
+            elif scale == 2.5:
+                p_scale=0.18
+            elif scale == 3:
+                p_scale=0.12
+            else:
+                raise NotImplementedError('--ratio_std must be one of the [0.5, 1, 1.5, 2, 2.5, 3]')
             params = self.opt.p_lam
-            nimg = np.random.poisson(params[pidx]*img)/float(params[pidx])
-            nimg = img + scale*(nimg-img)
+            nimg = np.random.poisson(params[pidx]*p_scale*img)/float(params[pidx]*p_scale)
+
         elif noise=='g':
             params = self.opt.g_std
             # noise = np.random.normal(loc=0, scale=params[pidx], size=img.shape).astype(float)
             noise = np.random.normal(loc=0, scale=scale*sigma_est*self.opt.ratio_std, size=img.shape).astype(float)
-            nimg = img + noise
+            nimg = img + scale*noise
+            # nimg = img + noise
         elif noise=='bf':
             params = self.opt.b_dcs
             clean = cv2.bilateralFilter(img, int(params[0]), scale*sigma_est*self.opt.ratio_std, params[2])
+            # clean = cv2.bilateralFilter(img, int(params[0]), scale*sigma_est*self.opt.ratio_std, params[2])
             noise = img-clean
             if params[1]<0.1:
                 nimg = img + noise/params[1]/10 #amplify noise.. 0.1-> 1, 0.05->2, 0.01->10
@@ -128,8 +143,6 @@ def run_train(opt, source, target):
     if opt.pretrained : 
         net, checkpoint = load_model(opt, net)
         # set_checkpoint_dir(opt)
-        # net_init = load_model(opt, net)
-        # net.load_state_dict(copy.deepcopy(net_init.state_dict()))
     else : 
         raise KeyboardInterrupt('--mode fine_tuning has to be used with --pretrained option')
 
@@ -203,7 +216,6 @@ def run_train(opt, source, target):
             src_loader = DataLoader(dataset=src_dataset, batch_size=opt.batch_size)
 
             #initialize net, optimizer
-            # net.load_state_dict(copy.deepcopy(net_init.state_dict()))
             net.load_state_dict(checkpoint['model'])
             optimizer = optim.Adam(net.denoiser.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay)
             optimizer_dc = optim.Adam(net.domain_discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2), eps=1e-8, weight_decay=opt.weight_decay_dc)
@@ -244,7 +256,21 @@ def run_train(opt, source, target):
                 optimizer.zero_grad()
                 net.denoiser.zero_grad()
                 trg_patch_tensor, _ = net.denoiser(trg_noise_tensor)
-                loss = mse_criterion(trg_patch_tensor, trg_input_tensor)
+
+                #gradient reversal, only for c_img input domain classifier
+                if opt.fine_tuning_rev:
+                    if opt.dc_input == 'c_img':
+                        trg_output_tensor, _ = net.denoiser(trg_input_tensor)
+                        d_trg = net.domain_discriminator(torch.cat((trg_output_tensor, trg_output_tensor), 1))
+                        trg_class = net.get_target_tensor(d_trg, False)
+                        rev_loss = opt.rev_weight * net.dc_criterion(d_trg, trg_class)
+                    else : 
+                        raise NotImplementedError('--dc_input is not c_img')
+                    loss = mse_criterion(trg_patch_tensor, trg_input_tensor) + rev_loss
+                else : 
+                    loss = mse_criterion(trg_patch_tensor, trg_input_tensor)
+
+                #loss update
                 if loss < best_loss:
                     best_loss = loss
                     #test original img
@@ -252,7 +278,6 @@ def run_train(opt, source, target):
                         trg_out_tensor,_ = net.denoiser(trg_img_tensor)
                         _, n_psnr, n_ssim,  _, psnr, ssim = calc_metrics(trg_img_tensor, trg_out_tensor, trg_ref_tensor) 
                     print('--->#{} updated! loss : {:.6f}'.format(idx, loss.item()))
-
                 loss.backward()
                 optimizer.step()
 

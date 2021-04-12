@@ -106,7 +106,10 @@ def run_test(opt, img_list, gt_img_list):
                         print("input_tensor[{}:{}].shape: {}".format(i, i+1, input_tensor[i:i+1].shape))
                         out_tensor[i] = forward_ensemble(input_tensor[i:i+1], net=net, device=opt.device)
                 else:
-                    out_tensor,_ = net(input_tensor)
+                    if 'rev' in opt.way:
+                        out_tensor,_ = net(input_tensor)
+                    else : 
+                        out_tensor = net(input_tensor)
                 # print("out_tensor:", out_tensor.size())
 
                 out_tensor = out_tensor.to(opt.device)

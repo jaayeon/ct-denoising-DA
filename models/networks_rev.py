@@ -28,8 +28,7 @@ class Networks_rev(nn.Module):
             self.dc_channel = 64*2**(opt.style_stage if opt.style_stage<4 else 6-opt.style_stage) #128 256 512 256 128 64
             input_size = (opt.patch_size//8)*2**(opt.style_stage-3 if opt.style_stage>3 else 3-opt.style_stage) #40 20 10 20 40 80 
         elif self.dc_input == 'feature' and opt.model == 'edsr':
-            #clarrify self.dc_channel & input_size 
-            raise NotImplementedError('you have to clarrify self.dc_channel and input_size of feature')
+            self.dc_channel = 96
         else :
             self.dc_channel = opt.n_channels
 
@@ -60,8 +59,10 @@ class Networks_rev(nn.Module):
         self.trg_out, self.trg_feature = self.denoiser(trg)
 
         if self.change_contents:
-            src_out, trg_out = self.content_randomization(self.src_out, self.trg_out)
+            src_out, trg_out, idx_swap = self.content_randomization(self.src_out, self.trg_out, return_idx=True)
+            src_lbl, trg_out = self.content_randomization(src_lbl, self.trg_out, idx_swap=idx_swap)
             src_feature, trg_feature = self.content_randomization(self.src_feature, self.trg_feature)
+            src, trg = self.content_randomization(src, trg, idx_swap=idx_swap)
         else : 
             src_out, trg_out = self.src_out, self.trg_out
             src_feature, trg_feature = self.src_feature, self.trg_feature
@@ -185,7 +186,7 @@ class Networks_rev(nn.Module):
             y = y[0:x.size(0), :, :, :]
         return x,y
 
-    def content_randomization(self, src, trg):
+    def content_randomization(self, src, trg, idx_swap=None, return_idx=False):
         eps = 1e-5
         x=torch.cat((src,trg),0)
         n,c,h,w=x.size()
@@ -194,14 +195,17 @@ class Networks_rev(nn.Module):
         var=x.var(-1,keepdim=True)
 
         x=(x-mean)/(var+eps).sqrt()
-
-        idx_swap=torch.randperm(n)
+        if idx_swap == None: #if there's no designated idx_swap, give new idx_swap
+            idx_swap=torch.randperm(n)
         x=x[idx_swap].detach()
 
-        x=x*(var+eps).sqrt()+mean
+        x=x*(var+eps).sqrt()+mean 
         x=x.view(n,c,h,w)
 
-        return x[:int(n/2)], x[int(n/2):]
+        if return_idx:
+            return x[:int(n/2)], x[int(n/2):], idx_swap
+        else : 
+            return x[:int(n/2)], x[int(n/2):]
     
     def get_target_tensor(self, prediction, real):
         if real :
