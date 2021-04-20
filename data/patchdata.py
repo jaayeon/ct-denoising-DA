@@ -132,6 +132,9 @@ class PatchData(data.Dataset):
             num_noise_modes = len(self.noise)
             noise = self.noise[random.randint(0,num_noise_modes-1)]
             #set parameter index (for mayo 1mm-0, 3mm-1, else-0)
+            # if noise == 'sp':
+            #     nfilename = filename.replace('full', 'qquarter')
+            #     nimg = imageio.imread(nfilename)
             param_idx = 1 if '3mm' in filename else 0 
             nimg = self.make_noise(pair[0], noise=noise, pidx=param_idx, scale_max=self.scale_max, scale_min=self.scale_min)
             ntensor = common.np2Tensor(nimg, n_channels=self.n_channels)
@@ -243,8 +246,8 @@ class PatchData(data.Dataset):
             nimg = np.random.poisson(params[pidx]*p_scale*img)/float(params[pidx]*p_scale)
         elif noise=='g':
             params = self.opt.g_std
-            # noise = np.random.normal(loc=0, scale=params[pidx], size=img.shape).astype(float)
-            noise = np.random.normal(loc=0, scale=scale*sigma_est*self.opt.ratio_std, size=img.shape).astype(float)
+            noise = np.random.normal(loc=0, scale=scale*params[pidx], size=img.shape).astype(float)
+            # noise = np.random.normal(loc=0, scale=scale*sigma_est*self.opt.ratio_std, size=img.shape).astype(float)
             nimg = img + noise
         elif noise=='bf':
             params = self.opt.b_dcs
