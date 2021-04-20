@@ -29,15 +29,18 @@ if __name__ == "__main__":
     mayo_1_3 = [mayo_1q, mayo_3q]
     n_mayo_1_3 = [n_mayo_1q, n_mayo_3q]
 
+    # mayo_1_3 = [mayo_3q, mayo_3q]
+    # n_mayo_1_3 = [n_mayo_3q, n_mayo_3q]
+
     #1mm, 3mm
     for idx, mayo in enumerate(mayo_1_3):
-        val = opt.p_val[idx]
+        vals = opt.p_val[idx]
         n_mayo = n_mayo_1_3[idx]
 
         for i,imgpath in enumerate(mayo,1):
             print('[{}/{}] start {}'.format(i,len(mayo),imgpath))
             basename = os.path.basename(imgpath)
-            nbasename = '_'.join(basename.split('_')[:-1]) + '_nfp_' + str(val) 
+            nbasename = '_'.join(basename.split('_')[:-1]) + '_nfp_' + str(vals) 
             nimgpath = os.path.join(n_mayo,nbasename)
             if not os.path.exists(nimgpath):
                 os.mkdir(nimgpath)
@@ -51,12 +54,12 @@ if __name__ == "__main__":
                 arr_norm = (arr-min_val)/(max_val-min_val)
                 # vals = len(np.unique(arr_norm))
                 # vals = 2**np.ceil(np.log2(vals))
-                vals = val
                 # print(vals)
-                narr = np.random.poisson(arr_norm*vals)/float(vals)
+                narr = np.random.poisson(arr_norm*vals)/float(vals) #poisson
                 narr = narr*(max_val-min_val)+min_val
 
                 imsave(os.path.join(nimgpath, '{}_{}.tif'.format(nbasename, str(j).zfill(3))), narr.astype('float32'))
                 if j%100 == 0:
                     print('...{}/{} progressed'.format(j,720))
+
             print('[{}/{}] save {}'.format(i,len(mayo_1q),nimgpath))
