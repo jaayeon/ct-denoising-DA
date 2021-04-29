@@ -56,7 +56,7 @@ class EDSR(nn.Module):
         x = self.head(x)
         feature = self.body1(x)
         res = self.body2(feature)
-        # res += x
+        res += x
         out = self.tail(res)
         
         out += global_res

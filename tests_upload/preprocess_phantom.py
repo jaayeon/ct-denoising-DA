@@ -11,12 +11,13 @@ def change_os_slash(dir_name):
 
     return out_dir_name
 
+ge_pth = '../../data/denoising/train/phantom/ge/chest'
 ge_pth = '../../data/denoising/train/phantom/ge/pelvis'
 
 #before run this code,
 #you have to delete phantom images below..
 #phantom-ge-chest level3, level5 : delete 001~041 & 301~all | remain only 043~300
-for thck in [3,5]:
+for thck in [1,3,5]:
     ge_dir = os.path.join(ge_pth, 'level{}_*'.format(thck))
     ge_dir = glob.glob(ge_dir)
     ge_crop_dir = ge_dir[0] + '_crop'

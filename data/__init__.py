@@ -21,6 +21,9 @@ def get_module_attr(dataset):
     if dataset == 'mayo':
         module_name = 'mayo'
         attr = 'Mayo'
+    elif dataset == 'mayo-syn':
+        module_name = 'mayo-syn'
+        attr = 'MayoSyn'
     elif 'lp-mayo' in dataset:
         module_name = 'lp-mayo'
         attr = 'LPMAYO'

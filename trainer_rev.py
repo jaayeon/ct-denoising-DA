@@ -23,7 +23,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         print("===> Use Adam optimizer")
     elif opt.optimizer == 'rms':
         optimizer = optim.RMSprop(net.denoiser.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay)
-        optimizer_dc = optim.RMSprop(net.domain_discriminator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay)
+        optimizer_dc = optim.RMSprop(net.domain_discriminator.parameters(), lr=opt.lr, eps=1e-8, weight_decay=opt.weight_decay_dc)
         print("===> Use RMSprop optimizer")
 
     if opt.resume:
@@ -31,7 +31,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         opt.start_epoch, net, optimizers = load_model(opt, net, optimizer=[optimizer, optimizer_dc])
         optimizer, optimizer_dc = optimizers[0], optimizers[1]
     elif opt.pretrained : 
-        net = load_model(opt, net)
+        net, _ = load_model(opt, net) #only denoiser weight
         set_checkpoint_dir(opt)
     else : 
         set_checkpoint_dir(opt)
@@ -40,8 +40,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         net.denoiser = nn.DataParallel(net.denoiser)
         net.domain_discriminator = nn.DataParallel(net.domain_discriminator)
 
-    scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5, mode='min')
-    scheduler_dc = ReduceLROnPlateau(optimizer_dc, factor=0.5, patience=5, mode='min')
+    scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=20, mode='min')
+    scheduler_dc = ReduceLROnPlateau(optimizer_dc, factor=0.5, patience=20, mode='min')
 
     # if opt.start_epoch == 1:
     keys = ['loss', 'lloss', 'ploss', 'revloss', 'dcloss', 'src_psnr', 'nsrc_psnr', 'trg_psnr', 'ntrg_psnr']
@@ -86,7 +86,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             #denoiser
             optimizer.zero_grad()
             net.denoiser.zero_grad()
-            loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, return_losses=True)
+            loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, rev=opt.rev, return_losses=True)
             loss.backward()
             optimizer.step()
 

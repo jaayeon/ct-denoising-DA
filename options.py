@@ -14,7 +14,8 @@ parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'fine_tuning'])
 parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr'])
 parser.add_argument('--way', type=str, default='rev', choices=['base', 'rev', 'wgan', 'wganrev'])
-
+parser.add_argument('--no_rev', dest='rev', action='store_false', help='no domain adversarial loss for denoiser')
+parser.set_defaults(rev=True)
 
 parser.add_argument('--multi_gpu', default=False, action='store_true',
                     help='Use multiple GPUs')
@@ -46,14 +47,14 @@ parser.add_argument('--in_mem', default=False, action='store_true',
 parser.add_argument('--use_pt', default=False, action='store_true',
                     help='use pt data, do not check img files')
 
-parser.add_argument('--source', type=str, default='ge', choices=['lp-mayo', 'piglet', 'mayo', 'siemens', 'toshiba', 'ge'], 
+parser.add_argument('--source', type=str, default='ge', choices=['lp-mayo', 'piglet', 'mayo', 'siemens', 'toshiba', 'ge', 'mayo-syn'], 
                     help='Specify dataset name for source dataset (not for base)')
-parser.add_argument('--target', type=str, default='mayo', choices=['lp-mayo', 'piglet', 'mayo', 'siemens', 'toshiba', 'ge'],
+parser.add_argument('--target', type=str, default='mayo', choices=['lp-mayo', 'piglet', 'mayo', 'siemens', 'toshiba', 'ge', 'mayo-syn'],
                     help='Specify dataset name for target dataset (not for base)')
 parser.add_argument('--fine_tuning_num', type=int, default=10, help='back prop num for each image')
 parser.add_argument('--fine_tuning_rev', action='store_true', help='add gradient reversal in fine tuning')
 parser.add_argument('--train_datasets', nargs='+', default=None,
-                    choices=['mayo','lp-mayo','piglet', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge'],
+                    choices=['mayo','lp-mayo','piglet', 'fake-lp-mayo', 'siemens', 'toshiba', 'ge', 'mayo-syn'],
                     help='Specify dataset name for base, default=source')
 
 parser.add_argument('--data_dir', type=str, default=data_dir,
@@ -160,7 +161,7 @@ parser.add_argument('--pretrained', default=False, action='store_true',
 parser.add_argument("--optimizer", type=str, default='adam',
                     help="Loss function (adam, sgd, rms)")
 parser.add_argument('--loss', type=str, default='l1', choices=['l1','l2'])
-parser.add_argument('--lr', type=float, default=0.0001,
+parser.add_argument('--lr', type=float, default=0.0002,
                     help='Adam: learning rate')
 parser.add_argument('--b1', type=float, default=0.9,
                     help='Adam: decay of first order momentum of gradient')

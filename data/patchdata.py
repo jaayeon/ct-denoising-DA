@@ -46,8 +46,10 @@ class PatchData(data.Dataset):
             self.dir_hr = os.path.join(path_bin, self.dir_hr.split('/')[-1])
             self.dir_lr = os.path.join(path_bin, self.dir_lr.split('/')[-1])
             self.ext = ('.pt', '.pt')
-
-            self.images_hr, self.images_lr = self._scan()
+            if self.noise == ['sp'] and self.dataset=='mayo':
+                self.images_hr, self.images_lr = self._scan_sp()
+            else : 
+                self.images_hr, self.images_lr = self._scan()
             print("[*]RESET FILE SYSTEM to PT FOLDER")
             print("dir_hr:", os.path.abspath(self.dir_hr))
             print("dir_lr:", os.path.abspath(self.dir_lr))
@@ -56,7 +58,10 @@ class PatchData(data.Dataset):
             if self.in_mem:
                 self._load2mem()
         else : 
-            list_hr, list_lr = self._scan()
+            if self.noise == ['sp'] and self.dataset=='mayo':
+                list_hr, list_lr = self._scan_sp()
+            else : 
+                list_hr, list_lr = self._scan()
 
             if opt.ext.find('img') >= 0 or benchmark:
                 self.images_hr, self.images_lr = list_hr, list_lr
@@ -100,6 +105,9 @@ class PatchData(data.Dataset):
 
         return names_hr, names_lr
 
+    def _scan_sp(self):
+        pass
+
     def _set_filesystem(self, data_dir):
         self.apath = os.path.join(data_dir, self.mode, self.dataset)
         self.dir_hr = os.path.join(self.apath, 'hr')
@@ -132,9 +140,6 @@ class PatchData(data.Dataset):
             num_noise_modes = len(self.noise)
             noise = self.noise[random.randint(0,num_noise_modes-1)]
             #set parameter index (for mayo 1mm-0, 3mm-1, else-0)
-            # if noise == 'sp':
-            #     nfilename = filename.replace('full', 'qquarter')
-            #     nimg = imageio.imread(nfilename)
             param_idx = 1 if '3mm' in filename else 0 
             nimg = self.make_noise(pair[0], noise=noise, pidx=param_idx, scale_max=self.scale_max, scale_min=self.scale_min)
             ntensor = common.np2Tensor(nimg, n_channels=self.n_channels)
@@ -179,7 +184,8 @@ class PatchData(data.Dataset):
         hr = np.asarray(hr)
         lr = np.asarray(lr)
             
-        return lr, hr, filename
+        # return lr, hr, filename
+        return lr, hr, f_hr
 
     def _load_mem(self, idx):
         idx = self._get_index(idx)
@@ -206,23 +212,35 @@ class PatchData(data.Dataset):
         self.images_hr = images_hr_list
         self.images_lr = images_lr_list
 
-    def get_patch(self, lr, hr): # h,w,c
+    # def get_patch(self, lr, hr): # h,w,c
+    #     scale = 1
+    #     if self.mode == 'train':
+    #         lr, hr = common.get_patch(
+    #             lr, hr,
+    #             patch_size=self.opt.patch_size,
+    #             n_channels=self.n_channels
+    #         )
+    #         if self.opt.augment: lr, hr = common.augment(lr, hr)
+    #     else:
+    #         ih, iw = lr.shape[:2]
+    #         hr = hr[0:ih * scale, 0:iw * scale]
+
+    #     return lr, hr
+
+    def get_patch(self, *data): # h,w,c
         scale = 1
         if self.mode == 'train':
-            lr, hr = common.get_patch(
-                lr, hr,
+            data = common.get_patch(
+                *data,
                 patch_size=self.opt.patch_size,
                 n_channels=self.n_channels
             )
-            if self.opt.augment: lr, hr = common.augment(lr, hr)
+            if self.opt.augment: data = common.augment(*data)
         else:
-            ih, iw = lr.shape[:2]
-            hr = hr[0:ih * scale, 0:iw * scale]
+            ih, iw = data[0].shape[:2]
+            data[1] = data[1][0:ih * scale, 0:iw * scale]
 
-        # if self.add_noise:
-        #     lr = common.add_noise(lr, self.noise)
-
-        return lr, hr
+        return data
 
     def make_noise(self, img, noise='p', pidx=0, scale_max=3, scale_min=0.5):
         scale = random.randint(scale_min*2,scale_max*2)/2

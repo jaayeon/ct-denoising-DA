@@ -105,7 +105,9 @@ def load_model(opt, model, optimizer=None):
         checkpoint = torch.load(checkpoint_path)
         # print(checkpoint.keys())
         n_epoch = checkpoint['epoch']
-        model.load_state_dict(checkpoint['model'])
+        # print(model.denoiser.body1[0].body[0].weight)
+        model.load_state_dict(checkpoint['model'], strict=False) #, strict=False
+        # print(model.denoiser.body1[0].body[0].weight)
         if optimizer is not None:
             for i in range(len(optimizer)):
                 optimizer[i].load_state_dict(checkpoint['optimizer'][i])

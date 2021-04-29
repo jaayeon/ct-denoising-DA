@@ -38,7 +38,7 @@ def run_train(opt, training_dataloader, valid_dataloader):
     if opt.multi_gpu:
         net = nn.DataParallel(net)
     
-    scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5, mode='min')
+    scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=20, mode='min')
     # scheduler = StepLR(optimizer, step_size=50, gamma=0.5)
 
     # Create log file when training start

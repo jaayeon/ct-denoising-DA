@@ -33,7 +33,7 @@ class Networks(nn.Module):
 
 
     def g_loss(self, x, y, perceptual=True, return_losses=True):
-        self.denoiser.train()
+        # self.denoiser.train()
     
         self.out  = self.denoiser(x)
         l_loss = self.l_weight * self.l_criterion(self.out, y)

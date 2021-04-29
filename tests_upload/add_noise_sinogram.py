@@ -26,11 +26,11 @@ if __name__ == "__main__":
     if not os.path.exists(n_mayo_1q):
         os.mkdir(n_mayo_1q)
 
-    mayo_1_3 = [mayo_1q, mayo_3q]
-    n_mayo_1_3 = [n_mayo_1q, n_mayo_3q]
+    # mayo_1_3 = [mayo_1q, mayo_3q]
+    # n_mayo_1_3 = [n_mayo_1q, n_mayo_3q]
 
-    # mayo_1_3 = [mayo_3q, mayo_3q]
-    # n_mayo_1_3 = [n_mayo_3q, n_mayo_3q]
+    mayo_1_3 = [mayo_3q, mayo_3q]
+    n_mayo_1_3 = [n_mayo_3q, n_mayo_3q]
 
     #1mm, 3mm
     for idx, mayo in enumerate(mayo_1_3):
@@ -63,3 +63,4 @@ if __name__ == "__main__":
                     print('...{}/{} progressed'.format(j,720))
 
             print('[{}/{}] save {}'.format(i,len(mayo_1q),nimgpath))
+            exit()

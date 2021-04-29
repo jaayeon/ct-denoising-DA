@@ -80,9 +80,14 @@ class Networks_rev(nn.Module):
             d_trg = self.domain_discriminator(trg_feature.detach())
             gp_loss = self.gp(src_feature.detach(), trg_feature.detach()) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'c_img': #concat2
-            d_src = self.domain_discriminator(torch.cat((src_out.detach(), src_lbl), 1))
-            d_trg = self.domain_discriminator(torch.cat((trg_out.detach(), trg_out.detach()), 1))
-            gp_loss = self.gp(torch.cat((src_out.detach(), src_lbl), 1), torch.cat((trg_out.detach(), trg_out.detach()),1)) if self.dc_mode=='wss' else 0
+            # d_src = self.domain_discriminator(torch.cat((src_out.detach(), src_lbl), 1))
+            # d_trg = self.domain_discriminator(torch.cat((trg_out.detach(), trg_out.detach()), 1))
+            # gp_loss = self.gp(torch.cat((src_out.detach(), src_lbl), 1), torch.cat((trg_out.detach(), trg_out.detach()),1)) if self.dc_mode=='wss' else 0
+
+            d_src = self.domain_discriminator(torch.cat((src_out.detach(), src), 1))
+            d_trg = self.domain_discriminator(torch.cat((trg_out.detach(), trg), 1))
+            gp_loss = self.gp(torch.cat((src_out.detach(), src), 1), torch.cat((trg_out.detach(),trg),1)) if self.dc_mode=='wss' else 0
+
         elif self.dc_input == 'c_noise': #concat
             d_src = self.domain_discriminator(torch.cat((src_out.detach()-src, src_lbl-src), 1))
             d_trg = self.domain_discriminator(torch.cat((trg_out.detach()-trg, trg_out.detach()-trg), 1))
@@ -110,7 +115,7 @@ class Networks_rev(nn.Module):
         loss = self.p_criterion(fake_feature, real_feature)
         return loss
 
-    def g_loss(self, src, trg, src_lbl, perceptual=True, trg_noise=None, return_losses=True):
+    def g_loss(self, src, trg, src_lbl, perceptual=True, trg_noise=None, rev=True, return_losses=True):
         self.denoiser.train()
         self.domain_discriminator.eval()
 
@@ -144,19 +149,23 @@ class Networks_rev(nn.Module):
         elif self.dc_input == 'feature':
             d_src = self.domain_discriminator(self.src_feature)
         elif self.dc_input == 'c_img':
-            d_src = self.domain_discriminator(torch.cat((self.src_out, src_lbl), 1))
+            # d_src = self.domain_discriminator(torch.cat((self.src_out, src_lbl), 1))
+            d_src = self.domain_discriminator(torch.cat((self.src_out, src), 1))
         elif self.dc_input == 'c_noise':
             d_src = self.domain_discriminator(torch.cat((self.src_out-src, src_lbl-src), 1))
         else:
             raise NotImplementedError('you have to implement dc_input {}'.format(self.dc_input))
 
-        if self.dc_mode in ['mse', 'bce'] : 
+        if rev and self.dc_mode in ['mse', 'bce'] : 
             src_class = self.get_target_tensor(d_src, True)
             rev_loss = self.rev_weight * self.dc_criterion(d_src, src_class)
-        else : 
+        elif rev : 
             rev_loss = -self.rev_weight * torch.mean(d_src)
+        else : 
+            # print('no rev')
+            rev_loss = torch.from_numpy(np.array(0.0))
 
-        #weighted sum    
+        #weighted sum  
         loss = l_loss + p_loss + rev_loss
 
 
@@ -206,7 +215,7 @@ class Networks_rev(nn.Module):
             return x[:int(n/2)], x[int(n/2):], idx_swap
         else : 
             return x[:int(n/2)], x[int(n/2):]
-    
+
     def get_target_tensor(self, prediction, real):
         if real :
             target_tensor = torch.ones(prediction.size())
