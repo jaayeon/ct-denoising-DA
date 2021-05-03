@@ -52,8 +52,8 @@ class Networks_rev(nn.Module):
         self.rev_weight = opt.rev_weight #reversal gradient loss weight
 
     def dc_loss(self, src, src_lbl, trg):
-        self.denoiser.eval()
-        self.domain_discriminator.train()
+        self.set_requires_grad(self.denoiser, requires_grad=False)
+        self.set_requires_grad(self.domain_discriminator, requires_grad=True)
 
         self.src_out, self.src_feature = self.denoiser(src)
         self.trg_out, self.trg_feature = self.denoiser(trg)
@@ -70,7 +70,12 @@ class Networks_rev(nn.Module):
         if self.dc_input == 'img':
             d_src = self.domain_discriminator(src_out.detach())
             d_trg = self.domain_discriminator(trg_out.detach())
+            # d_src = self.domain_discriminator(src)
+            # d_trg = self.domain_discriminator(trg)
             gp_loss = self.gp(src_out.detach(), trg_out.detach()) if self.dc_mode=='wss' else 0
+        elif self.dc_input == 'origin':
+            d_src = self.domain_discriminator(src)
+            d_trg = self.domain_discriminator(trg)
         elif self.dc_input == 'noise': #src_out
             d_src = self.domain_discriminator(src_out.detach()-src)
             d_trg = self.domain_discriminator(trg_out.detach()-trg)
@@ -115,9 +120,11 @@ class Networks_rev(nn.Module):
         loss = self.p_criterion(fake_feature, real_feature)
         return loss
 
+    '''
     def g_loss(self, src, trg, src_lbl, perceptual=True, trg_noise=None, rev=True, return_losses=True):
-        self.denoiser.train()
-        self.domain_discriminator.eval()
+
+        self.set_requires_grad(self.denoiser, requires_grad=True)
+        self.set_requires_grad(self.domain_discriminator, requires_grad=False)
 
         if not trg_noise==None : 
             batch = src.size()[0]
@@ -125,12 +132,12 @@ class Networks_rev(nn.Module):
             lbl = torch.cat((src_lbl, trg), 0)
             out, feature = self.denoiser(denoiser_input)
             self.src_out = out[:batch, :, :, :]
-            self.feature = feature[:batch, :, :, :]
+            self.src_feature = feature[:batch, :, :, :]
         else : 
             lbl = src_lbl
             out, feature  = self.denoiser(src)
             self.src_out = out
-            self.feature = feature
+            self.src_feature = feature
 
         #l1 l2 loss
         l_loss = self.l_weight * self.l_criterion(out, lbl)
@@ -144,6 +151,8 @@ class Networks_rev(nn.Module):
         #domain classifier loss
         if self.dc_input == 'img':
             d_src = self.domain_discriminator(self.src_out)
+        elif self.dc_input == 'origin':
+            d_src = self.domain_discriminator(src)
         elif self.dc_input == 'noise':
             d_src = self.domain_discriminator(self.src_out-src)
         elif self.dc_input == 'feature':
@@ -163,6 +172,75 @@ class Networks_rev(nn.Module):
             rev_loss = -self.rev_weight * torch.mean(d_src)
         else : 
             # print('no rev')
+            rev_loss = torch.from_numpy(np.array(0.0))
+
+        #weighted sum  
+        loss = l_loss + p_loss + rev_loss
+
+
+        return (loss, l_loss, p_loss, rev_loss) if return_losses else loss
+    '''
+
+    def g_loss(self, src, trg, src_lbl, perceptual=True, trg_noise=None, rev=True, return_losses=True):
+        '''
+        step 1 : Supervised Learning with Denoiser L(D(src), src*) ... trg_noise=None, rev=False
+        step 2 : Supervised Learning with Denoiser L(D(src|n_trg), src*|trg), Domain Classifier Adversarial Loss for Denoiser with L(DC(trg'),0) ... trg_noise=arr, rev=True
+        one step : Supervised Learning with Denoiser L(D(src|n_trg), src*|trg), Domain Classifier Adversarial Loss for Denoiser with L(DC(trg'),0) ... trg_noise=arr, rev=True
+        '''
+        self.set_requires_grad(self.denoiser, requires_grad=True)
+        self.set_requires_grad(self.domain_discriminator, requires_grad=False)
+        batch = src.size()[0]
+        if not trg_noise==None : #denoiser loss (src'|n_trg', src*|trg), concat trg is only for getting trg' which is used in reverse - step2, one step
+            denoiser_input = torch.cat((src, trg_noise, trg), 0)
+            lbl = torch.cat((src_lbl, trg), 0)
+            out, feature = self.denoiser(denoiser_input)
+            self.src_out = out[:batch, :, :, :]
+            self.src_feature = feature[:batch, :, :, :]
+            self.trg_out = out[2*batch:, :, :, :]
+            self.trg_feature = feature[2*batch:, :, :, :]
+            out = out[:2*batch, :, :, :]
+        else : #denoiser loss (src', src*), concat trg is only for getting trg' which is used in reverse - step1
+            lbl = src_lbl
+            denoiser_input = torch.cat((src, trg), 0)
+            out, feature  = self.denoiser(denoiser_input)
+            self.src_out = out[:batch, :, :, :]
+            self.src_feature = feature[:batch, :, :, :]
+            self.trg_out = out[batch:, :, :, :]
+            self.trg_feature = feature[batch:, :, :, :]
+            out = out[:batch, :, :, :]
+
+        #l1 l2 loss
+        l_loss = self.l_weight * self.l_criterion(out, lbl)
+
+        #perceptual loss
+        if perceptual:
+            p_loss = self.vgg_weight * self.p_loss(out, lbl)
+        else:
+            p_loss = torch.from_numpy(np.array(0.0))
+        
+        #domain classifier loss
+        if rev and (self.dc_input == 'img' or self.dc_input == 'origin'):
+            d_trg = self.domain_discriminator(self.trg_out)
+        elif rev and self.dc_input == 'noise':
+            d_trg = self.domain_discriminator(self.trg_out-trg)
+        elif rev and self.dc_input == 'feature':
+            d_trg = self.domain_discriminator(self.trg_feature)
+        elif rev and self.dc_input == 'c_img':
+            # d_trg = self.domain_discriminator(torch.cat((self.src_out, src_lbl), 1))
+            d_trg = self.domain_discriminator(torch.cat((self.trg_out, trg), 1))
+        elif rev and self.dc_input == 'c_noise':
+            d_trg = self.domain_discriminator(torch.cat((self.trg_out-trg, self.trg_out-trg), 1))
+        else:
+            pass
+            #raise NotImplementedError('you have to implement dc_input {}'.format(self.dc_input))
+
+        if rev and self.dc_mode in ['mse', 'bce'] : 
+            trg_class = self.get_target_tensor(d_trg, False)
+            rev_loss = self.rev_weight * self.dc_criterion(d_trg, trg_class)
+        elif rev : #wss
+            rev_loss = -self.rev_weight * torch.mean(d_trg) #not sure,, changed src->trg
+        else : 
+            # no rev
             rev_loss = torch.from_numpy(np.array(0.0))
 
         #weighted sum  
@@ -226,3 +304,11 @@ class Networks_rev(nn.Module):
             target_tensor = target_tensor.cuda() 
 
         return target_tensor
+
+    def set_requires_grad(self, nets, requires_grad=False):
+        if not isinstance(nets, list):
+            nets = [nets]
+        for net in nets:
+            if net is not None:
+                for param in net.parameters():
+                    param.requires_grad = requires_grad

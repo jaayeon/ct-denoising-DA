@@ -131,7 +131,7 @@ parser.add_argument('--rev_weight', type=float, default=0.001,
                     help='domain classifier reversal loss')
 parser.add_argument('--dc_mode', type=str, default='mse', choices=['mse', 'bce', 'wss'], 
                     help='domain classifier loss mode')
-parser.add_argument('--dc_input', type=str, default='c_img', choices=['img', 'noise', 'feature', 'c_img', 'c_noise', 'c_feature'],
+parser.add_argument('--dc_input', type=str, default='c_img', choices=['img', 'noise', 'feature', 'c_img', 'c_noise', 'c_feature', 'origin'],
                     help = 'domain classifier input')
 parser.add_argument('--style_stage', type=int, default=4, choices=[1,2,3,4,5,6],
                     help='stage for feature which is extracted from generator to domain classifier input')
