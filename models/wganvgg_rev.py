@@ -11,6 +11,8 @@ def make_model(opt):
 
 
 class WGAN_VGG_rev(nn.Module):
+
+    
     # referred from https://github.com/kuc2477/pytorch-wgan-gp
     def __init__(self, opt):
         super(WGAN_VGG_rev, self).__init__()
@@ -29,6 +31,7 @@ class WGAN_VGG_rev(nn.Module):
             input_size = (opt.patch_size//8)*2**(opt.style_stage-3 if opt.style_stage>3 else 3-opt.style_stage) #40 20 10 20 40 80 
         else :
             self.dc_channel = opt.n_channels
+
 
         self.p_criterion = nn.L1Loss() #perceptual loss
         self.l_criterion = nn.L1Loss() #l1 pixelwise loss

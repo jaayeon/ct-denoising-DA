@@ -27,10 +27,10 @@ class BasicBlock(nn.Module):
 class UNet(nn.Module):
     def __init__(self, opt, block=BasicBlock):
         super(UNet, self).__init__()
-        self.rev = False
+        self.rev = opt.rev
         self.nc = opt.n_channels
         self.style_stage = opt.style_stage
-        self.bn = opt.bn or opt.sagnet
+        self.bn = False or opt.sagnet
         self.sagnet = opt.sagnet
         self.dc_input = opt.dc_input
 
@@ -68,9 +68,9 @@ class UNet(nn.Module):
         out = self.outc(x)
         out = out + inx
         
-        if self.rev : 
+        if self.rev: 
             return out, feature
-        else : 
+        else:
             return out
 
     def style_params(self):

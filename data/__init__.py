@@ -1,9 +1,85 @@
 import os, glob
 from importlib import import_module
-# from torch.utils.data import dataloader
+import random
+
+import torch.utils.data as data
 from torch.utils import data as D
 from torch.utils.data import DataLoader
 from torch.utils.data import ConcatDataset
+
+"""This package includes all the modules related to data loading and preprocessing
+
+ To add a custom dataset class called 'dummy', you need to add a file called 'dummy_dataset.py' and define a subclass 'DummyDataset' inherited from BaseDataset.
+ You need to implement four functions:
+    -- <__init__>:                      initialize the class, first call BaseDataset.__init__(self, opt).
+    -- <__len__>:                       return the size of dataset.
+    -- <__getitem__>:                   get a data point from data loader.
+    -- <modify_commandline_options>:    (optionally) add dataset-specific options and set default options.
+
+Now you can use the dataset class by specifying flag '--dataset_mode dummy'.
+See our template dataset class 'template_dataset.py' for more details.
+"""
+import importlib
+import torch.utils.data
+from torch.utils.data import dataloader
+from torch.utils.data import ConcatDataset
+
+from data.patchdata import PatchData
+# from data.patchdata3d import PatchData3D
+
+def find_dataset_using_name(dataset_name):
+    """Import the module "data/[dataset_name]_dataset.py".
+
+    In the file, the class called DatasetNameDataset() will
+    be instantiated. It has to be a subclass of BaseDataset,
+    and it is case-insensitive.
+    """
+    dataset_filename = "data." + dataset_name
+    datasetlib = importlib.import_module(dataset_filename)
+
+    dataset = None
+    target_dataset_name = dataset_name
+    for name, cls in datasetlib.__dict__.items():
+        if name.lower() == target_dataset_name.lower() \
+           and issubclass(cls, PatchData):
+            dataset = cls
+
+    if dataset is None:
+        raise NotImplementedError("In %s.py, there should be a subclass of BaseDataset with class name that matches %s in lowercase." % (dataset_filename, target_dataset_name))
+
+    return dataset
+
+
+def get_option_setter(dataset_name):
+    """Return the static method <modify_commandline_options> of the dataset class."""
+    dataset_class = find_dataset_using_name(dataset_name)
+    return dataset_class.modify_commandline_options
+
+
+# def create_dataset(opt):
+#     """Create a dataset given the option.
+
+#     This function wraps the class CustomDatasetDataLoader.
+#         This is the main interface between this package and 'train.py'/'test.py'
+
+#     Example:
+#         >>> from data import create_dataset
+#         >>> dataset = create_dataset(opt)
+#     """
+#     data_loader = CustomDatasetDataLoader(opt)
+#     dataset = data_loader.load_data()
+#     return dataset
+
+def create_dataset(opt):
+    dataloader = {}
+    if opt.is_train:
+        # dataloader['train'] = TrainDataloader(opt).train_dataloader
+        dataloader['train'], dataloader['test'] = TrainDataloader(opt).get_datasets()
+    else:
+        dataloader['test'] = TestDataloader(opt).test_dataloaders
+
+    return dataloader
+
 
 # This is a simple wrapper function for ConcatDataset
 class MyConcatDataset(ConcatDataset):
@@ -15,80 +91,111 @@ class MyConcatDataset(ConcatDataset):
         for d in self.datasets:
             if hasattr(d, 'set_scale'): d.set_scale(idx_scale)
 
+class ABDataset(data.Dataset):
+    def __init__(self, dataA, dataB, mode='unaligned'):
+        self.dataA = dataA
+        self.dataB = dataB
+        self.sizeA = len(dataA)
+        self.sizeB = len(dataB)
+        self.mode = mode
+
+        if self.mode == 'aligned':
+            assert self.sizeA == self.sizeB, "number of dataset A and B should be equal"
+        
+        print('Number of samples in datasetsA:', self.sizeA)
+        print('Number of samples in datasetsB:', self.sizeB)
+
+    def __getitem__(self, idx):
+        if self.mode == 'unaligned':
+            lrA, hrA, fnA, dlA = self.dataA[idx % self.sizeA]
+            idxB = random.randint(0, self.sizeB - 1)
+            lrB, hrB, fnB, dlB = self.dataB[idxB]
+        else:
+            lrA, hrA, fnA, dlA = self.dataA[idx]
+            lrB, hrB, fnB, dlB = self.dataB[idx]
+
+        return (lrA, hrA, fnA, dlA), (lrB, hrB, fnB, dlB)
+        
+    def __len__(self):
+        return max(self.sizeA, self.sizeB)
 
 
-def get_module_attr(dataset):
-    if dataset == 'mayo':
-        module_name = 'mayo'
-        attr = 'Mayo'
-    elif 'lp-mayo' in dataset:
-        module_name = 'lp-mayo'
-        attr = 'LPMAYO'
-    elif 'piglet' in dataset:
-        module_name = 'piglet'
-        attr = 'PIGLET'
-    elif 'siemens' in dataset:
-        module_name = 'phantom'
-        attr = 'PHANTOM'
-    elif 'toshiba' in dataset:
-        module_name = 'phantom'
-        attr = 'PHANTOM'
-    elif 'ge' in dataset:   
-        module_name = 'phantom'
-        attr = 'PHANTOM'  
+class TrainDataloader:
+    def __init__(self, args):
+        self.loader_train = None
+        da_list = []
+        db_list = []
+        for dataset_name in args.dataA:
+            print('dataset_name:', dataset_name)
+            dataset_class = find_dataset_using_name(dataset_name)
+            da_list.append(dataset_class(args, name=dataset_name))
 
-    print("{} module_name: {}".format(__file__, module_name))
-    print("attr:", attr)
-    return module_name, attr
+        datasetsA = MyConcatDataset(da_list)
+
+        for dataset_name in args.dataB:
+            print('dataset_name:', dataset_name)
+            dataset_class = find_dataset_using_name(dataset_name)
+            db_list.append(dataset_class(args, name=dataset_name, dir='B'))
+
+        datasetsB = MyConcatDataset(db_list)
 
 
+        datasets = ABDataset(datasetsA, datasetsB, mode=args.dataset_mode)
 
-def get_train_valid_dataloader(opt, train_datasets=None, add_noise=None):
-    datasets = []
-    if train_datasets == None:
-        train_datasets = opt.train_datasets
-    else : 
-        train_datasets = [train_datasets]
-    print("Train datasets: ", train_datasets)
-    for d in train_datasets:
-        # module_name = d
-        module_name, attr = get_module_attr(d)
-        m = import_module('data.' + module_name.lower())
-        datasets.append(getattr(m, attr)(opt, name=d, mode=opt.mode, add_noise=add_noise))
+        valid_len = int(args.valid_ratio * len(datasets))
+        train_len = len(datasets) - valid_len
+        train_d, valid_d = D.random_split(datasets, lengths=[train_len, valid_len])
+        print('len(datasets):', len(datasets))
+        print('len(traind_d):', len(train_d))
+        print('len(valid_d):', len(valid_d))
 
-    # module_name, attr = get_module_attr(opt.dataset)
-    # m = import_module('data.' + module_name.lower())
 
-    # datasets.append(getattr(m, attr)(opt, name=opt.dataset))
+        self.train_dataloader = DataLoader(
+            # MyConcatDataset(train_datasets)
+            datasets,
+            batch_size=args.batch_size,
+            shuffle=True,
+            pin_memory=True,
+            num_workers=args.n_threads,
+        )
 
-    train_ds = MyConcatDataset(datasets)
-    train_len = int(opt.train_ratio * len(train_ds))
-    valid_len = len(train_ds) - train_len
-    train_dataset, valid_dataset = D.random_split(train_ds, lengths=[train_len, valid_len])
+        self.valid_dataloader = DataLoader(
+            valid_d,
+            batch_size=args.batch_size,
+            shuffle=False,
+            pin_memory=True,
+            num_workers=args.n_threads,
+        )
     
-    print("Number of train dataset samples:", train_len)
-    print("Number of valid dataset samples:", valid_len)
-    print("Threading {}".format(opt.n_threads))
-
-    train_data_loader = DataLoader(dataset=train_dataset,
-                                batch_size=opt.batch_size,
-                                shuffle=True,
-                                pin_memory=True,
-                                num_workers=opt.n_threads)
-    valid_data_loader = DataLoader(dataset=valid_dataset,
-                                batch_size=opt.batch_size,
-                                shuffle=False,
-                                pin_memory=True,
-                                num_workers=opt.n_threads)
-
-    return train_data_loader, valid_data_loader
+    def get_datasets(self):
+        return self.train_dataloader, self.valid_dataloader
 
 
+class TestDataloader:
+    def __init__(self, args):
 
+        if len(args.test_datasets) == 0:
+            args.test_datasets = args.datasets
 
-def get_test_img_list(opt):
-    img_list = glob.glob(os.path.join(opt.img_dir, '**'))
-    gt_img_list = glob.glob(os.path.join(opt.gt_img_dir, '**'))
-    # print(img_list)
-    print('test img low path : {}\ntest img high path : {}'.format(opt.img_dir, opt.gt_img_dir))
-    return img_list, gt_img_list
+        batch_size = args.batch_size if args.test_random_patch else 1
+        self.test_dataloaders = []
+        print('args.test_datasets:', args.test_datasets)
+        for dataset_name in args.test_datasets:
+            dataset_class = find_dataset_using_name(dataset_name)
+            testset = dataset_class(args, name=dataset_name, is_train=False)
+            if len(testset) != 0:
+                # print("is_train:", args.is_train)
+                if args.test_ratio < 1.0 and args.is_train:
+                    testset_len = int(args.test_ratio * len(testset))
+                    remain_len = len(testset) - testset_len
+                    testset, _ = D.random_split(testset, lengths=[testset_len, remain_len])
+                    print("Number of test datasets[{}]: {}".format(dataset_name, len(testset)))
+                self.test_dataloaders.append(
+                    DataLoader(
+                        testset,
+                        batch_size=batch_size,
+                        shuffle=False,
+                        pin_memory=True,
+                        num_workers=args.n_threads
+                    )
+                )

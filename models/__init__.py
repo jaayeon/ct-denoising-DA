@@ -1,106 +1,75 @@
-from importlib import import_module
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torchvision.models import vgg19
-import random
+"""This package contains modules related to objective functions, optimizations, and network architectures.
 
-def set_model(opt):
+To add a custom model class called 'dummy', you need to add a file called 'dummy_model.py' and define a subclass DummyModel inherited from BaseModel.
+You need to implement the following five functions:
+    -- <__init__>:                      initialize the class; first call BaseModel.__init__(self, opt).
+    -- <set_input>:                     unpack data from dataset and apply preprocessing.
+    -- <forward>:                       produce intermediate results.
+    -- <optimize_parameters>:           calculate loss, gradients, and update network weights.
+    -- <modify_commandline_options>:    (optionally) add model-specific options and set default options.
 
-    if opt.way == 'base':
-        module_name = 'models.networks_base'
-    elif opt.way == 'rev':
-        module_name = 'models.networks_rev'
-    elif opt.way == 'wgan':
-        module_name = 'models.wganvgg_base'
-    elif opt.way == 'wganrev':
-        module_name = 'models.wganvgg_rev'
+In the function <__init__>, you need to define four lists:
+    -- self.loss_names (str list):          specify the training losses that you want to plot and save.
+    -- self.model_names (str list):         define networks used in our training.
+    -- self.visual_names (str list):        specify the images that you want to display and save.
+    -- self.optimizers (optimizer list):    define and initialize optimizers. You can define one optimizer for each network. If two networks are updated at the same time, you can use itertools.chain to group them. See cycle_gan_model.py for an usage.
 
-    module = import_module(module_name)
-    model = module.make_model(opt)
+Now you can use the model class by specifying flag '--model dummy'.
+See our template model class 'template_model.py' for more details.
+"""
 
-    if opt.use_cuda:
-        model = model.to(opt.device)
+import importlib
+from models.base_model import BaseModel
+# import torch.nn as nn
+
+def find_model_using_name(model_name):
+    """Import the module "models/[model_name].py".
+
+    In the file, the class called DatasetNameModel() will
+    be instantiated. It has to be a subclass of BaseModel,
+    and it is case-insensitive.
+    """
+    model_filename = "models." + model_name
+    modellib = importlib.import_module(model_filename)
+    model = None
+    target_model_name = model_name
+    for name, cls in modellib.__dict__.items():
+        if name.lower() == target_model_name.lower() \
+           and issubclass(cls, BaseModel):
+            model = cls
+
+    if model is None:
+        print("In %s.py, there should be a subclass of BaseModel with class name that matches %s in lowercase." % (model_filename, target_model_name))
+        exit(0)
 
     return model
 
-def get_base_model(opt):
-    if opt.model == 'dncnn':
-        module_name = 'models.dncnn'
-    elif opt.model == 'unet':
-        module_name = 'models.unet'
-    elif opt.model == 'edsr':
-        module_name = 'models.edsr'   
-    else :     
-        raise ValueError("Need to specify model {}".format(opt.model))
-    
-    module = import_module(module_name)
-    model = module.make_model(opt)
 
-    return model
+def get_option_setter(model_name):
+    """Return the static method <modify_commandline_options> of the model class."""
+    model_class = find_model_using_name(model_name)
+    return model_class.modify_commandline_options
 
 
-class FeatureExtractor(nn.Module):
-    def __init__(self):
-        super(FeatureExtractor, self).__init__()
-        vgg19_model = vgg19(pretrained=True)
-        self.feature_extractor = nn.Sequential(*list(vgg19_model.features.children())[:35]).eval()
+def create_model(opt):
+    """Create a model given the option.
 
-    def forward(self, x):
-        x = self.normalize(x)
-        out = self.feature_extractor(x)
-        return out
+    This function warps the class CustomDatasetDataLoader.
+    This is the main interface between this package and 'train.py'/'test.py'
 
-    def normalize(self, x):
-        mean=[0.485, 0.456, 0.406]
-        std=[0.229, 0.224, 0.225]
-        for i, (m,s) in enumerate(zip(mean, std)):
-            x[:,i:i+1,:,:] = (x[:,i:i+1,:,:] - m)/s
-        return x
+    Example:
+        >>> from models import create_model
+        >>> model = create_model(opt)
+    """
+    model = find_model_using_name(opt.model)
+    instance = model(opt)
+    print("model [{}] was created".format(type(instance).__name__))
+    return instance
 
-
-class Discriminator(nn.Module):
-    def __init__(self, input_size, input_channels, class_num=1):
-        super(Discriminator, self).__init__()
-        self.input_size = input_size
-        def conv_output_size(input_size, kernel_size_list, stride_list):
-            n=input_size
-            for k, s in zip(kernel_size_list, stride_list):
-                # n = (n - k) // s + 1
-                n = (n - k + 2*1) // s + 1
-            return n
-
-        def add_block(layers, ch_in, ch_out, stride):
-            # layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 0))
-            layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 1))
-            layers.append(nn.LeakyReLU())
-            return layers
-
-        layers = []
-        # ch_stride_set = [(input_channels,64,1),(64,64,2),(64,128,1),(128,128,2),(128,256,1),(256,256,2)]
-        ch_stride_set = [(input_channels,64,1),(64,128,2),(128,256,1)]
-        for ch_in, ch_out, stride in ch_stride_set:
-            add_block(layers, ch_in, ch_out, stride)
-
-        # self.output_size = conv_output_size(input_size, [3]*6, [1,2]*3)
-        self.output_size = conv_output_size(input_size, [3]*3, [1,2,1])
-        self.net = nn.Sequential(*layers)
-        self.fc1 = nn.Linear(256*self.output_size*self.output_size, 1024)
-        self.fc2 = nn.Linear(1024, class_num)
-        self.lrelu = nn.LeakyReLU()
-
-    def forward(self, x):
-        x = self.random_crop(x)
-        out = self.net(x)
-        out = out.view(-1, 256*self.output_size*self.output_size)
-        out = self.lrelu(self.fc1(out))
-        out = self.fc2(out)
-        return out
-
-    def random_crop(self, x):
-        size = x.size()[-1] #b,c,h,w
-        if size == self.input_size:
-            return x
-        rh = random.randint(0, size-self.input_size)
-        rw = random.randint(0, size-self.input_size)
-        return x[:,:,rh:rh+self.input_size, rw:rw+self.input_size]
+# My function
+def get_savedir_setter(model_name):
+    """
+    Set save directory for checkpoints
+    """
+    model_class = find_model_using_name(model_name)
+    return model_class.set_savedir

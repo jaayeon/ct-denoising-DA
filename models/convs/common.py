@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import math
+from torch.autograd import Function
+
 
 def default_conv(in_channels, out_channels, kernel_size, bias=True):
     return nn.Conv2d(
@@ -41,44 +41,16 @@ class MeanShift(nn.Module):
         x = self.shifter(x)
         return x
 
+class ReverseLayerF(Function):
 
-class BasicBlock(nn.Sequential):
-    def __init__(
-        self, conv, in_channels, out_channels, kernel_size, stride=1, bias=False,
-        bn=True, act=nn.ReLU(True)):
+    @staticmethod
+    def forward(ctx, x, alpha):
+        ctx.alpha = alpha
 
-        super(BasicBlock, self).__init__()
+        return x.view_as(x)
 
-        m = [conv(in_channels, out_channels, kernel_size, bias=bias)]
-        if bn:
-            m.append(nn.BatchNorm2d(out_channels))
-        if act is not None:
-            m.append(act)
+    @staticmethod
+    def backward(ctx, grad_output):
+        output = grad_output.neg() * ctx.alpha
 
-    def forward(self, x):
-        return self.body(x).mul(self.res_scale)
-
-
-class ResBlock(nn.Module):
-    def __init__(
-        self, conv, n_feats, kernel_size,
-        bias=True, bn=False, act=nn.ReLU(True), res_scale=1):
-
-        super(ResBlock, self).__init__()
-        m = []
-        for i in range(2):
-            m.append(conv(n_feats, n_feats, kernel_size, bias=bias))
-            if bn:
-                m.append(nn.BatchNorm2d(n_feats))
-            if i == 0:
-                m.append(act)
-
-        self.body = nn.Sequential(*m)
-        self.res_scale = res_scale
-
-    def forward(self, x):
-        res = self.body(x).mul(self.res_scale)
-        res += x
-
-        return res
-
+        return output, None
