@@ -55,7 +55,7 @@ class NetRev(BaseModel):
         parser.add_argument('--rev', default=True, 
             help='reversal gradient back propagation')
 
-        parser.add_argument('--n_d_train', type=int, default=4,
+        parser.add_argument('--n_d_train', type=int, default=1,
             help='number of discriminator training')
         parser.add_argument('--generator', type=str, default='unet',
             help='generator model [unet | edsr]')
@@ -210,19 +210,19 @@ class NetRev(BaseModel):
             # d_trg = self.net_D(torch.cat((trg_out.detach(), trg_out.detach()), 1))
             # gp_loss = self.gp(torch.cat((src_out.detach(), src_lbl), 1), torch.cat((trg_out.detach(), trg_out.detach()),1)) if self.dc_mode=='wss' else 0
 
-            self.src_domain_pred = self.net_D(torch.cat((src_out.detach(), src), 1))
-            self.trg_domain_pred = self.net_D(torch.cat((trg_out.detach(), trg), 1))
+            self.src_domain_pred = self.net_D(torch.cat((src_out.detach(), self.src_x), 1))
+            self.trg_domain_pred = self.net_D(torch.cat((trg_out.detach(), self.trg_x), 1))
             gp_loss = self.gp(
-                torch.cat((src_out.detach(), src), 1),
-                torch.cat((trg_out.detach(), trg), 1)
+                torch.cat((src_out.detach(), self.src_x), 1),
+                torch.cat((trg_out.detach(), self.trg_x), 1)
             ) if self.dc_mode=='wss' else 0
 
         elif self.dc_input == 'c_noise': #concat
-            self.src_domain_pred = self.net_D(torch.cat((src_out.detach()-src, src_lbl-src), 1))
-            self.trg_domain_pred = self.net_D(torch.cat((trg_out.detach()-trg, trg_out.detach()-trg), 1))
+            self.src_domain_pred = self.net_D(torch.cat((src_out.detach()-self.src_x, src_lbl-self.src_x), 1))
+            self.trg_domain_pred = self.net_D(torch.cat((trg_out.detach()-self.trg_x, trg_out.detach()-self.trg_x), 1))
             gp_loss = self.gp(
-                torch.cat((src_out.detach()-src, src_lbl-src), 1),
-                torch.cat((trg_out.detach()-trg, trg_out.detach()-trg), 1)
+                torch.cat((src_out.detach()-self.src_x, src_lbl-self.src_x), 1),
+                torch.cat((trg_out.detach()-self.trg_x, trg_out.detach()-self.trg_x), 1)
             ) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'c_feature': 
             raise NotImplementedError('you have to implement concat_feature')
@@ -232,11 +232,11 @@ class NetRev(BaseModel):
         if self.dc_mode in ['mse', 'bce']:
             trg_class = self.get_target_tensor(self.trg_domain_pred, True)
             src_class = self.get_target_tensor(self.src_domain_pred, False)
-            loss = (self.dc_criterion(self.trg_domain_pred, trg_class) + self.dc_criterion(self.src_domain_pred, src_class)) * 0.5
+            self.d_loss = (self.dc_criterion(self.trg_domain_pred, trg_class) + self.dc_criterion(self.src_domain_pred, src_class)) * 0.5
         elif self.dc_mode == 'wss':
-            loss = -torch.mean(self.trg_domain_pred) + torch.mean(self.src_domain_pred) + gp_loss
+            self.loss = -torch.mean(self.trg_domain_pred) + torch.mean(self.src_domain_pred) + gp_loss
 
-        return loss
+        return self.d_loss
 
     def gp(self, y, fake, lambda_=10):
         assert y.size() == fake.size()
@@ -254,61 +254,44 @@ class NetRev(BaseModel):
         
 
     def g_loss(self, trg_noise=None, rev=True):
-        batch = src.size()[0]
-        if trg_noise is not None: #denoiser loss (src'|n_trg', src*|trg), concat trg is only for getting trg' which is used in reverse - step2, one step
-            denoiser_input = torch.cat((src, trg_noise, trg), 0)
-            lbl = torch.cat((src_lbl, trg), 0)
-            out, feature = self.denoiser(denoiser_input)
-            self.src_out = out[:batch, :, :, :]
-            self.src_feature = feature[:batch, :, :, :]
-            self.trg_out = out[2*batch:, :, :, :]
-            self.trg_feature = feature[2*batch:, :, :, :]
-            out = out[:2*batch, :, :, :]
-        else : #denoiser loss (src', src*), concat trg is only for getting trg' which is used in reverse - step1
-            lbl = src_lbl
-            denoiser_input = torch.cat((src, trg), 0)
-            out, feature  = self.denoiser(denoiser_input)
-            self.src_out = out[:batch, :, :, :]
-            self.src_feature = feature[:batch, :, :, :]
-            self.trg_out = out[batch:, :, :, :]
-            self.trg_feature = feature[batch:, :, :, :]
-            out = out[:batch, :, :, :]
+        # lbl = self.src_target
+        # out = self.src_out
 
         #perceptual loss
         if self.perceptual_loss:
-            self.content_loss, self.style_loss = self.perceptual_loss_criterion(out, lbl)
+            self.content_loss, self.style_loss = self.perceptual_loss_criterion(self.src_out, self.src_target)
             self.p_loss = self.content_loss + self.style_loss
         else:
-            self.p_loss = self.l_criterion(out, lbl)
+            self.p_loss = self.l_criterion(self.src_out, self.src_target)
         
         #domain classifier loss
         if rev and (self.dc_input == 'img' or self.dc_input == 'origin'):
-            d_trg = self.domain_discriminator(self.trg_out)
+            self.trg_domain_pred = self.net_D(self.trg_out)
         elif rev and self.dc_input == 'noise':
-            d_trg = self.domain_discriminator(self.trg_out-trg)
+            self.trg_domain_pred = self.net_D(self.trg_out-self.trg_x)
         elif rev and self.dc_input == 'feature':
-            d_trg = self.domain_discriminator(self.trg_feature)
+            self.trg_domain_pred = self.net_D(self.trg_feature)
         elif rev and self.dc_input == 'c_img':
-            # d_trg = self.domain_discriminator(torch.cat((self.src_out, src_lbl), 1))
-            d_trg = self.domain_discriminator(torch.cat((self.trg_out, trg), 1))
+            # d_trg = self.net_D(torch.cat((self.src_out, src_lbl), 1))
+            self.trg_domain_pred = self.net_D(torch.cat((self.trg_out, self.trg_x), 1))
         elif rev and self.dc_input == 'c_noise':
-            d_trg = self.domain_discriminator(torch.cat((self.trg_out-trg, self.trg_out-trg), 1))
+            self.trg_domain_pred = self.net_D(torch.cat((self.trg_out-trg, self.trg_out-trg), 1))
         else:
             pass
 
         if rev and self.dc_mode in ['mse', 'bce'] : 
-            trg_class = self.get_target_tensor(d_trg, False)
-            rev_loss = self.rev_weight * self.dc_criterion(d_trg, trg_class)
+            trg_class = self.get_target_tensor(self.trg_domain_pred, False)
+            self.rev_loss = self.rev_weight * self.dc_criterion(self.trg_domain_pred, trg_class)
         elif rev : #wss
-            rev_loss = -self.rev_weight * torch.mean(d_trg) #not sure,, changed src->trg
+            self.rev_loss = -self.rev_weight * torch.mean(self.trg_domain_pred) #not sure,, changed src->trg
         else : 
             # no rev
-            rev_loss = torch.from_numpy(np.array(0.0))
+            self.rev_loss = torch.from_numpy(np.array(0.0)).to(self.device)
 
         #weighted sum  
-        self.g_loss = self.p_loss + self.rev_loss
+        self.loss_g = self.p_loss + self.rev_loss
 
-        return self.g_loss
+        return self.loss_g
 
     def align_size(self, x, y):
         if x.size(0) == y.size(0) : 
@@ -389,7 +372,30 @@ class NetRev(BaseModel):
         trg_correct = torch.sum(trg_pred==self.trg_domain_label)
         trg_accr = trg_correct / self.trg_x.size(0)
 
-        print("{} {:.3f}s => Epoch[{}/{}]({}/{}): Loss_G: {:.8f}, Loss_D: {:.8f}, MSE_loss: {:.8f}, PSNR: {:.8f}".format(
-            phase, batch_time, opt.epoch, opt.n_epochs, iter, n_iter,
-            self.loss_g.item(), self.loss_d.item(), self.loss.item(), self.psnr.item())
-        )
+        src_out = self.src_out
+        trg_out = self.trg_out
+        smse_loss = self.mse_loss_criterion(self.src_out, self.src_target)
+        spsnr = 10 * torch.log10(1 / smse_loss)
+        
+        nmse_loss = self.mse_loss_criterion(self.src_x, self.src_target)
+        nspsnr = 10 * torch.log10(1 / nmse_loss)
+        
+        tmse_loss = self.mse_loss_criterion(self.trg_out, self.trg_target)
+        tpsnr = 10 * torch.log10(1 / tmse_loss)
+        
+        tnmse_loss = self.mse_loss_criterion(self.trg_x, self.trg_target)
+        ntpsnr = 10 * torch.log10(1 / tnmse_loss)
+
+        self.loss = tnmse_loss
+        self.psnr = tpsnr
+        #update status
+        # status = [(), p_loss.item(), rev_loss.item(), dc_loss.item(), spsnr, nspsnr, tpsnr, ntpsnr]
+        print("{} {:.3f}s => Epoch[{}/{}]({}/{}): Loss_P: {:.6f} Loss_G: {:.6f}, Loss_DC: {:.6f}".format(
+            phase, batch_time, opt.epoch, opt.n_epochs, iter, n_iter, self.p_loss.item(), self.loss_g.item(), self.loss_d.item()
+        ))
+        print("Source (Noise loss: {:.6f}, Noise PNSR: {:.6f}, MSE_loss: {:.6f}, PSNR: {:.6f})".format(
+            nmse_loss.item(), nspsnr.item(), smse_loss.item(), spsnr.item()
+        ))
+        print("Target (Noise loss: {:.6f}, Noise PNSR: {:.6f}, MSE_loss: {:.6f}, PSNR: {:.6f})".format(
+            tnmse_loss.item(), ntpsnr.item(), tmse_loss.item(), tpsnr.item()
+        ))

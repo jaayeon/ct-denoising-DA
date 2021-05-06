@@ -44,7 +44,8 @@ def train_net(opt, model, dataloader, train=True):
             model.set_input(input)
             model.test()
 
-                # out and target should be detach()
+            # out and target should be detach()
+            model.forward()
             out = model.out.detach()
             target = trg[1].detach()
 
