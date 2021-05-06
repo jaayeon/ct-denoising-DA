@@ -214,7 +214,7 @@ class Networks_rev(nn.Module):
             src_loss = torch.from_numpy(np.array(0.0))
         if not trg_noise == None:
             self.n_trg_out, _ = self.denoiser(trg_noise)
-            ntrg_loss = self.l_weight(self.l_criterion(self.n_trg_out, trg))
+            ntrg_loss = self.l_weight*(self.l_criterion(self.n_trg_out, trg))
         else : 
             ntrg_loss = torch.from_numpy(np.array(0.0))
         l_loss = src_loss + ntrg_loss
