@@ -3,7 +3,6 @@ import time
 from shutil import copyfile, move
 
 import numpy as np
-from skimage.external.tifffile import imsave, imread
 
 
 def pad_tensor(tensor_img, patch_size, patch_offset):

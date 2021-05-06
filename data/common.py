@@ -1,6 +1,5 @@
 import random
 import numpy as np
-from skimage.external.tifffile import imsave, imread
 
 import skimage.color as sc
 

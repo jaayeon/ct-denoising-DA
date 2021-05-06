@@ -1,7 +1,7 @@
 import sys, os, glob
 import time
 
-from skimage.external.tifffile import imsave, imread
+# from skimage.external.tifffile import imsave, imread
 import numpy as np
 
 import torch

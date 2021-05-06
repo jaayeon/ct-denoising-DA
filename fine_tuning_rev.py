@@ -15,9 +15,9 @@ from utils.loader import load_model
 from utils.saver import Record
 from models import set_model
 
-from skimage.external.tifffile import imsave, imread
+# from skimage.external.tifffile import imsave, imread
 from skimage.restoration import denoise_nl_means, estimate_sigma
-import cv2
+# import cv2
 import copy
 
 class Single_Image_Data(Dataset):

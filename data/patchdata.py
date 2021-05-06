@@ -1,11 +1,12 @@
-import os, cv2
+import os
+# import cv2
 import glob
 import random
 import pickle
 
 from skimage.io import imsave, imread
-from skimage.external.tifffile import imsave as t_imsave
-from skimage.external.tifffile import imread as t_imread
+# from skimage.external.tifffile import imsave as t_imsave
+# from skimage.external.tifffile import imread as t_imread
 from skimage.restoration import denoise_nl_means, estimate_sigma
 
 from data import common
