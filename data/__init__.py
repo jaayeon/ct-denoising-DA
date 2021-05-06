@@ -107,14 +107,14 @@ class ABDataset(data.Dataset):
 
     def __getitem__(self, idx):
         if self.mode == 'unaligned':
-            lrA, hrA, fnA, dlA = self.dataA[idx % self.sizeA]
+            data_dictA = self.dataA[idx % self.sizeA]
             idxB = random.randint(0, self.sizeB - 1)
-            lrB, hrB, fnB, dlB = self.dataB[idxB]
+            data_dictB = self.dataB[idxB]
         else:
-            lrA, hrA, fnA, dlA = self.dataA[idx]
-            lrB, hrB, fnB, dlB = self.dataB[idx]
+            data_dictA = self.dataA[idx]
+            data_dictB = self.dataB[idx]
 
-        return (lrA, hrA, fnA, dlA), (lrB, hrB, fnB, dlB)
+        return data_dictA, data_dictB
         
     def __len__(self):
         return max(self.sizeA, self.sizeB)

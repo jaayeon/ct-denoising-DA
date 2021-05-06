@@ -117,7 +117,14 @@ class PatchData(BaseDataset):
         # if self.n_channels == 3: pair = [(p.astype(np.float) / 255.0) for p in pair]
         pair_t = common.np2Tensor(*pair, rgb_range=self.args.rgb_range)
 
-        return pair_t[0], pair_t[1], filename, domain_label
+        data_dict = {
+            'lr': pair_t[0],
+            'hr': pair_t[1],
+            'filename': filename,
+            'domain_label': domain_label
+        }
+        # return pair_t[0], pair_t[1], filename, domain_label
+        return data_dict
             
     def __len__(self):
         if self.is_train:

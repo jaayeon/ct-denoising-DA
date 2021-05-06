@@ -99,10 +99,10 @@ class BaseOptions():
         parser.add_argument('--in_mem', action='store_true',
             help='load whole data into memory, default: False')
 
-        parser.add_argument('--add_noise', default=False, action='store_true',
-            help='add noise to clean image to generate noisy images')
-        parser.add_argument('--noise', type=int, default=0,
-            help='Gaussian Noise standard deviation, if set to 0, add random noise to make blind noise')
+        # parser.add_argument('--add_noise', default=False, action='store_true',
+        #     help='add noise to clean image to generate noisy images')
+        # parser.add_argument('--noise', type=int, default=0,
+        #     help='Gaussian Noise standard deviation, if set to 0, add random noise to make blind noise')
 
         parser.add_argument("--test_patches", dest='test_patches', action='store_true',
             help='divide image into patches when test')

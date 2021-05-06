@@ -1,12 +1,13 @@
 import random
 import numpy as np
 import skimage.color as sc
+from skimage.restoration import denoise_nl_means, estimate_sigma
 
 import torch
 
 def add_noise(x, noise=0):
     if noise == 0:
-        noise_value = np.random.randint(55)
+        noise_value = np.random.random(0.01)
     else:
         noise_value = noise
 
@@ -17,6 +18,56 @@ def add_noise(x, noise=0):
     x_noise = x_noise.clip(0, 255).astype(np.uint8)
     return x_noise
 
+def add_gaussian_noise(x):
+    noise_value = np.random.rand(1)
+
+    noises = np.random.normal(scale=noise_value, size=x.shape)
+    noises = noises.round()
+        
+    x_noise = x + noises.astype(x.dtype)
+    x_noise = x_noise.clip(0, 1).astype(x.dtype)
+    return x_noise
+
+def make_noise(img, noise='p', pidx=0, scale_max=3, scale_min=0.5):
+    scale = random.randint(scale_min*2,scale_max*2)/2
+    sigma_est = np.mean(estimate_sigma(img, multichannel=False))
+    if noise=='p':
+        if scale == 0.5:
+            p_scale=4
+        elif scale == 1:
+            p_scale=1
+        elif scale == 1.5:
+            p_scale=0.5
+        elif scale == 2:
+            p_scale=0.28
+        elif scale == 2.5:
+            p_scale=0.18
+        elif scale == 3:
+            p_scale=0.12
+        else:
+            raise NotImplementedError('--ratio_std must be one of the [0.5, 1, 1.5, 2, 2.5, 3]')
+        params = self.opt.p_lam
+        nimg = np.random.poisson(params[pidx]*p_scale*img)/float(params[pidx]*p_scale)
+    elif noise=='g':
+        params = self.opt.g_std
+        noise = np.random.normal(loc=0, scale=scale*params[pidx], size=img.shape).astype(float)
+        # noise = np.random.normal(loc=0, scale=scale*sigma_est*self.opt.ratio_std, size=img.shape).astype(float)
+        nimg = img + noise
+    elif noise=='bf':
+        params = self.opt.b_dcs
+        clean = cv2.bilateralFilter(img, int(params[0]), scale*sigma_est*self.opt.ratio_std, params[2])
+        noise = img-clean
+        if params[1]<0.1:
+            nimg = img + noise/params[1]/10 #amplify noise.. 0.1-> 1, 0.05->2, 0.01->10
+        else : 
+            nimg = img + noise
+    elif noise=='nlm':
+        clean = denoise_nl_means(img, h=sigma_est*self.opt.ratio_std, fast_mode=True, 
+                                patch_size=5, patch_distance=13, multichannel=False)
+        noise = img-clean
+        nimg = img + scale*noise
+    return nimg
+    
 def augment(*args, hflip=True, rot=True):
     hflip = hflip and random.random() < 0.5
     vflip = rot and random.random() < 0.5
