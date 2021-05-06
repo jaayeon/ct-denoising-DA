@@ -76,13 +76,16 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_noise = trg_noise.to(opt.device) if opt.noise else None
 
             #domain classifier
-            optimizer_dc.zero_grad()
-            net.domain_discriminator.zero_grad()
-            for _ in range(opt.n_d_train):
+            if opt.pretrained:
                 dc_loss = net.dc_loss(src_img, src_lbl, trg_img)
-                dc_loss.backward()
-                optimizer_dc.step()
-            
+            else : 
+                optimizer_dc.zero_grad()
+                net.domain_discriminator.zero_grad()
+                for _ in range(opt.n_d_train):
+                    dc_loss = net.dc_loss(src_img, src_lbl, trg_img)
+                    dc_loss.backward()
+                    optimizer_dc.step()
+                
             #denoiser
             optimizer.zero_grad()
             net.denoiser.zero_grad()
