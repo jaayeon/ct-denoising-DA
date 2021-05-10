@@ -161,15 +161,15 @@ class NetRev(BaseModel):
 
     def set_input(self, input):
         self.src = input['src']
-        self.src_x = self.src[0].to(self.device)
-        self.src_target = self.src[1].to(self.device)
-        self.src_domain_label = self.src[3].to(self.device)
+        self.src_x = self.src['lr'].to(self.device)
+        self.src_target = self.src['hr'].to(self.device)
+        self.src_domain_label = self.src['domain_label'].to(self.device)
 
         self.trg = input['trg']
         if self.trg is not None:
-            self.trg_x = self.trg[0].to(self.device)
-            self.trg_target = self.trg[1].to(self.device)
-            self.trg_domain_label = self.trg[3].to(self.device)
+            self.trg_x = self.trg['lr'].to(self.device)
+            self.trg_target = self.trg['hr'].to(self.device)
+            self.trg_domain_label = self.trg['domain_label'].to(self.device)
 
     def forward_src(self):
         self.src_out, self.src_feature = self.net_G(self.src_x)
@@ -178,7 +178,9 @@ class NetRev(BaseModel):
         self.trg_out, self.trg_feature = self.net_G(self.trg_x)
 
     def forward(self):
-        self.out = self.net_G(self.trg_x)
+        # print('trg_x:', self.trg_x)
+        self.out, _ = self.net_G(self.trg_x)
+        # print('out:', self.out)
 
     def dc_loss(self):
         if self.change_contents:
@@ -368,7 +370,7 @@ class NetRev(BaseModel):
         src_accr = src_correct / self.src_x.size(0)
 
         _, trg_pred = torch.max(self.trg_domain_pred, 1)
-        print('trg_pred:', trg_pred)
+        # print('trg_pred:', trg_pred)
         trg_correct = torch.sum(trg_pred==self.trg_domain_label)
         trg_accr = trg_correct / self.trg_x.size(0)
 
@@ -393,9 +395,11 @@ class NetRev(BaseModel):
         print("{} {:.3f}s => Epoch[{}/{}]({}/{}): Loss_P: {:.6f} Loss_G: {:.6f}, Loss_DC: {:.6f}".format(
             phase, batch_time, opt.epoch, opt.n_epochs, iter, n_iter, self.p_loss.item(), self.loss_g.item(), self.loss_d.item()
         ))
-        print("Source (Noise loss: {:.6f}, Noise PNSR: {:.6f}, MSE_loss: {:.6f}, PSNR: {:.6f})".format(
-            nmse_loss.item(), nspsnr.item(), smse_loss.item(), spsnr.item()
+        print("Source (Domain Pred: {:.2f}, Noise loss: {:.6f}, Noise PNSR: {:.6f}, MSE_loss: {:.6f}, PSNR: {:.6f})".format(
+            src_accr.item(), nmse_loss.item(), nspsnr.item(), smse_loss.item(), spsnr.item()
         ))
-        print("Target (Noise loss: {:.6f}, Noise PNSR: {:.6f}, MSE_loss: {:.6f}, PSNR: {:.6f})".format(
+        print("Target (Doamin Pred:  {:.2f}, Noise loss: {:.6f}, Noise PNSR: {:.6f}, MSE_loss: {:.6f}, PSNR: {:.6f})".format(
+            trg_accr.item(), 
+            
             tnmse_loss.item(), ntpsnr.item(), tmse_loss.item(), tpsnr.item()
         ))

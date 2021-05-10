@@ -26,8 +26,8 @@ class PatchData(BaseDataset):
         self.mode = 'train' if is_train else 'test'
         n_datasets = len(args.dataA) if dir == 'A' else len(args.dataB)
 
-        self.add_noise = args.add_noise
-        self.noise = 0
+        # self.add_noise = args.add_noise
+        # self.noise = 0
         
         self._set_filesystem(args.data_dir)
         print("----------------- {} {} dataset -------------------".format(name, self.mode))

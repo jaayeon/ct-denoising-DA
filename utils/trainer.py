@@ -47,7 +47,7 @@ def train_net(opt, model, dataloader, train=True):
             # out and target should be detach()
             model.forward()
             out = model.out.detach()
-            target = trg[1].detach()
+            target = trg['hr'].detach()
 
             # x = x.to(opt.device).detach()
             out = out.to(opt.device).detach()
