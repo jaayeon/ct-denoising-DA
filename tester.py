@@ -2,6 +2,7 @@ import sys, os, glob
 import time
 
 # from skimage.external.tifffile import imsave, imread
+import imageio
 import numpy as np
 
 import torch
@@ -67,8 +68,8 @@ def run_test(opt, img_list, gt_img_list):
 
             print("[{}/{}] processing {}".format(num+1, num_test_img, os.path.abspath(img_path)))
 
-            input_img = imread(img_path)
-            gt_img = imread(gt_img_path)
+            input_img = imageio.imread(img_path)
+            gt_img = imageio.imread(gt_img_path)
             input_img_shape = input_img.shape
 
             #only for gray scale img
@@ -155,8 +156,8 @@ def run_test(opt, img_list, gt_img_list):
 
             # print("out_img.shape:", out_img.shape)
             # print(os.path.abspath(out_img_path))
-            imsave(concat_img_path, concat_img)
-            imsave(out_img_path, out_img)
+            imageio.imwrite(concat_img_path, concat_img)
+            imageio.imwrite(out_img_path, out_img)
 
     print(" #{:d} Test Average Noise Loss: {:.8f}, Average Noise PSNR: {:.8f}, Average Noise SSIM: {:.8f}, Average Loss: {:.8f}, Average PSNR: {:.8f}, Average SSIM: {:.8f}".format(
         num, noise_avg_loss / num, noise_avg_psnr / num, noise_avg_ssim / num, avg_loss / num, avg_psnr / num, avg_ssim / num

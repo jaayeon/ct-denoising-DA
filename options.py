@@ -12,10 +12,11 @@ test_result_dir = os.path.join(data_dir, 'test_result_DA')
 parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'fine_tuning'])
-parser.add_argument('--model', type=str, default='unet', choices=['dncnn', 'unet', 'edsr'])
+parser.add_argument('--model', type=str, default='edsr', choices=['dncnn', 'unet', 'edsr'])
 parser.add_argument('--way', type=str, default='rev', choices=['base', 'rev', 'wgan', 'wganrev'])
 parser.add_argument('--no_rev', dest='rev', action='store_false', help='no domain adversarial loss for denoiser')
 parser.set_defaults(rev=True)
+parser.add_argument('--saliency', action='store_true', help='multipy saliency map for calculating loss')
 
 parser.add_argument('--multi_gpu', default=False, action='store_true',
                     help='Use multiple GPUs')
@@ -121,15 +122,15 @@ parser.add_argument('--lambda_gp', type=float, default= 10,
                     help='lambda_gp for wgan discriminator loss')
 parser.add_argument('--n_d_train', type=float, default=4,
                     help='num of discriminator training for each generator training')
-parser.add_argument('--vgg_weight', type=float, default=1,
+parser.add_argument('--vgg_weight', type=float, default=0,
                     help='perceptual loss weight (wganvgg default was 0.5)') # change p_weight to vgg_weight
 parser.add_argument('--l_weight', type=float, default=1,
                     help = 'l1 pixel wise loss in gloss')
 
 #rev
-parser.add_argument('--rev_weight', type=float, default=0.001,
+parser.add_argument('--rev_weight', type=float, default=0.5,
                     help='domain classifier reversal loss')
-parser.add_argument('--dc_mode', type=str, default='mse', choices=['mse', 'bce', 'wss'], 
+parser.add_argument('--dc_mode', type=str, default='mse', choices=['mse', 'bce', 'wss', 'ce'], 
                     help='domain classifier loss mode')
 parser.add_argument('--dc_input', type=str, default='c_img', choices=['img', 'noise', 'feature', 'c_img', 'c_noise', 'c_feature', 'origin'],
                     help = 'domain classifier input')
@@ -173,8 +174,8 @@ parser.add_argument("--start_epoch", type=int, default=1,
 parser.add_argument('--batch_size', type=int, default=32,
                     help='Size of the batches')
 parser.add_argument('--n_epochs', type=int, default=200)
-parser.add_argument('--weight_decay', type=float, default= 0.001)
-parser.add_argument('--weight_decay_dc', type=float, default= 0.1)
+parser.add_argument('--weight_decay', type=float, default= 0, help='0.0001')
+parser.add_argument('--weight_decay_dc', type=float, default= 0, help='0.1')
 
 
 

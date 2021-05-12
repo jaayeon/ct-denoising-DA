@@ -119,8 +119,8 @@ def load_model(opt, model, optimizer=None):
 
     print("Using epoch_num:", n_epoch)
     
-    # if not opt.pretrained:
-    opt.checkpoint_dir = checkpoint_dir
+    if not opt.pretrained:
+        opt.checkpoint_dir = checkpoint_dir
     print(model)
     if opt.mode == 'train' or opt.mode == 'fine_tuning':
         if opt.pretrained:
