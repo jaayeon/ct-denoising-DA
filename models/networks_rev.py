@@ -52,7 +52,8 @@ class Networks_rev(nn.Module):
         self.feature_extractor = FeatureExtractor()
 
         self.vgg_weight = opt.vgg_weight #perceptual loss weight
-        self.l_weight = opt.l_weight #l1 pixelwise loss weight
+        self.sl_weight = opt.sl_weight #l1 pixelwise loss weight in src img
+        self.tl_weight = opt.tl_weight #l1 pixelwise loss weight in trg img
         self.rev_weight = opt.rev_weight #reversal gradient loss weight
 
     def dc_loss(self, src, src_lbl, trg, ntrg=None):
@@ -79,8 +80,10 @@ class Networks_rev(nn.Module):
             gp_loss = self.gp(src_out.detach(), trg_out.detach()) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'origin':
             d_src = self.domain_discriminator(src)
+            d_src_out = self.domain_discriminator(src_out.detach())
+            d_src_ref = self.domain_discriminator(src_lbl)
             d_trg = self.domain_discriminator(trg)
-            d_ntrg = self.domain_discriminator(ntrg)
+            d_ntrg = self.domain_discriminator(ntrg) if ntrg != None else torch.ones(d_trg.size())
         elif self.dc_input == 'noise': #src_out
             d_src = self.domain_discriminator(src_out.detach()-src)
             d_trg = self.domain_discriminator(trg_out.detach()-trg)
@@ -108,7 +111,7 @@ class Networks_rev(nn.Module):
         if self.dc_mode in ['mse', 'bce']:
             trg_class = self.get_tensor(d_trg, 1, loss=self.dc_mode)
             src_class = self.get_tensor(d_src, 0, loss=self.dc_mode)
-            loss = (self.dc_criterion(d_trg, trg_class) + self.dc_criterion(d_src, src_class))*0.5
+            loss = 0.2*(self.dc_criterion(d_trg, trg_class) + self.dc_criterion(d_ntrg, trg_class) + self.dc_criterion(d_src, src_class) + self.dc_criterion(d_src_out, src_class) + self.dc_criterion(d_src_ref, src_class))
         elif self.dc_mode == 'ce':
             src_class = self.get_tensor(d_src, 0, loss=self.dc_mode)
             trg_class = self.get_tensor(d_trg, 1, loss=self.dc_mode)
@@ -158,7 +161,7 @@ class Networks_rev(nn.Module):
             out = out[:batch, :, :, :]
         
         #l1 l2 loss
-        l_loss = self.l_weight * self.l_criterion(out, lbl)
+        l_loss = self.sl_weight * self.l_criterion(out, lbl)
 
         #perceptual loss
         if perceptual:
@@ -216,19 +219,19 @@ class Networks_rev(nn.Module):
         self.src_out, self.src_feature = self.denoiser(src)
         self.trg_out, self.trg_feature = self.denoiser(trg)
         if self.opt.src_loss and not saliency:
-            src_loss = self.l_weight*self.l_criterion(self.src_out, src_lbl)
-            p_src_loss = self.vgg_weight* self.p_loss(self.src_out, src_lbl)
+            src_loss = self.sl_weight*self.l_criterion(self.src_out, src_lbl)
+            p_src_loss = self.sl_weight*self.vgg_weight*self.p_loss(self.src_out, src_lbl)
         elif self.opt.src_loss and saliency:
             saliency_map = self.get_saliency_map(self.domain_discriminator, src, loss=self.dc_mode, cls_idx=1)
-            src_loss = self.l_weight*self.l_criterion(saliency_map*self.src_out, saliency_map*src_lbl)
-            p_src_loss = self.vgg_weight* self.p_loss(saliency_map*self.src_out, saliency_map*src_lbl)
+            src_loss = self.sl_weight*self.l_criterion(saliency_map*self.src_out, saliency_map*src_lbl)
+            p_src_loss = self.sl_weight*self.vgg_weight*self.p_loss(saliency_map*self.src_out, saliency_map*src_lbl)
         else : 
             src_loss = torch.from_numpy(np.array(0.0))
             p_src_loss = torch.from_numpy(np.array(0.0))
         if not trg_noise == None:
             self.n_trg_out, _ = self.denoiser(trg_noise)
-            ntrg_loss = self.l_weight*(self.l_criterion(self.n_trg_out, trg))
-            p_ntrg_loss = self.vgg_weight*self.p_loss(self.n_trg_out, trg)
+            ntrg_loss = self.tl_weight*self.l_criterion(self.n_trg_out, trg)
+            p_ntrg_loss = self.tl_weight*self.vgg_weight*self.p_loss(self.n_trg_out, trg)
         else : 
             ntrg_loss = torch.from_numpy(np.array(0.0))
             p_ntrg_loss = torch.from_numpy(np.array(0.0))
@@ -356,7 +359,7 @@ class Networks_rev(nn.Module):
             output_max.backward()
         saliency = img.grad.data.abs()
 
-        #reverse--> get pixel which is not importand in domain decision making
+        #reverse--> get pixel which is not important in domain decision making
         saliency[saliency<1e-8]=1e-8
         reverse_saliency = 1/saliency
         max_s = torch.max(reverse_saliency)

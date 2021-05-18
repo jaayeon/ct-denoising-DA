@@ -89,7 +89,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             #denoiser
             optimizer.zero_grad()
             net.denoiser.zero_grad()
-            loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, rev=opt.rev, saliency=True, return_losses=True)
+            loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, rev=opt.rev, saliency=opt.saliency, return_losses=True)
             loss.backward()
             optimizer.step()
 
@@ -126,7 +126,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
             with torch.no_grad():
                 dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
-                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, saliency=False, return_losses=True)
+                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, saliency=opt.saliency, return_losses=True)
 
             #calculate psnr
             src_out = net.src_out

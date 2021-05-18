@@ -124,8 +124,10 @@ parser.add_argument('--n_d_train', type=float, default=4,
                     help='num of discriminator training for each generator training')
 parser.add_argument('--vgg_weight', type=float, default=0,
                     help='perceptual loss weight (wganvgg default was 0.5)') # change p_weight to vgg_weight
-parser.add_argument('--l_weight', type=float, default=1,
-                    help = 'l1 pixel wise loss in gloss')
+parser.add_argument('--sl_weight', type=float, default=1,
+                    help = 'l1 pixel wise loss of source domain in gloss')
+parser.add_argument('--tl_weight', type=float, default=1,
+                    help = 'l1 pixel wise loss of target domain in gloss')
 
 #rev
 parser.add_argument('--rev_weight', type=float, default=0.5,
