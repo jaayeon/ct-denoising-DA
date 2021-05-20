@@ -136,7 +136,6 @@ parser.add_argument('--dc_mode', type=str, default='mse', choices=['mse', 'bce',
                     help='domain classifier loss mode')
 parser.add_argument('--dc_input', type=str, default='c_img', choices=['img', 'noise', 'feature', 'c_img', 'c_noise', 'c_feature', 'origin'],
                     help = 'domain classifier input')
-parser.add_argument('--src_loss', action='store_true', help='add src domain pixel wise loss in 2nd training')
 parser.add_argument('--style_stage', type=int, default=4, choices=[1,2,3,4,5,6],
                     help='stage for feature which is extracted from generator to domain classifier input')
 parser.add_argument('--content_randomization', default=False, action='store_true')

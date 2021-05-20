@@ -83,7 +83,7 @@ class Networks_rev(nn.Module):
             d_src_out = self.domain_discriminator(src_out.detach())
             d_src_ref = self.domain_discriminator(src_lbl)
             d_trg = self.domain_discriminator(trg)
-            d_ntrg = self.domain_discriminator(ntrg) if ntrg != None else torch.ones(d_trg.size())
+            d_ntrg = self.domain_discriminator(ntrg) if ntrg != None else torch.ones(d_trg.size()).to(self.opt.device)
         elif self.dc_input == 'noise': #src_out
             d_src = self.domain_discriminator(src_out.detach()-src)
             d_trg = self.domain_discriminator(trg_out.detach()-trg)
@@ -218,16 +218,13 @@ class Networks_rev(nn.Module):
 
         self.src_out, self.src_feature = self.denoiser(src)
         self.trg_out, self.trg_feature = self.denoiser(trg)
-        if self.opt.src_loss and not saliency:
+        if not saliency:
             src_loss = self.sl_weight*self.l_criterion(self.src_out, src_lbl)
             p_src_loss = self.sl_weight*self.vgg_weight*self.p_loss(self.src_out, src_lbl)
-        elif self.opt.src_loss and saliency:
+        else:
             saliency_map = self.get_saliency_map(self.domain_discriminator, src, loss=self.dc_mode, cls_idx=1)
             src_loss = self.sl_weight*self.l_criterion(saliency_map*self.src_out, saliency_map*src_lbl)
             p_src_loss = self.sl_weight*self.vgg_weight*self.p_loss(saliency_map*self.src_out, saliency_map*src_lbl)
-        else : 
-            src_loss = torch.from_numpy(np.array(0.0))
-            p_src_loss = torch.from_numpy(np.array(0.0))
         if not trg_noise == None:
             self.n_trg_out, _ = self.denoiser(trg_noise)
             ntrg_loss = self.tl_weight*self.l_criterion(self.n_trg_out, trg)
@@ -262,7 +259,6 @@ class Networks_rev(nn.Module):
             d_src = self.domain_discriminator(torch.cat((self.src_out-src, src_lbl-src), 1))
         else:
             pass
-            #raise NotImplementedError('you have to implement dc_input {}'.format(self.dc_input))
 
         if rev and self.dc_mode in ['mse', 'bce'] : 
             trg_class = self.get_tensor(d_trg, 1)
