@@ -46,6 +46,10 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     # if opt.start_epoch == 1:
     keys = ['loss', 'lloss', 'ploss', 'revloss', 'dcloss', 'src_psnr', 'nsrc_psnr', 'trg_psnr', 'ntrg_psnr']
     record = Record(opt, train_length=len(src_t_loader), valid_length=len(src_v_loader), keys=keys)
+    if opt.pretrained:
+        save_criterion = 'trg_psnr'
+    else : 
+        save_criterion = 'src_psnr'
 
     mse_criterion = nn.MSELoss()
     if opt.use_cuda:
@@ -149,7 +153,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         scheduler_dc.step(mse_loss)
 
         record.print_average(mode='valid')
-        record.save_checkpoint(net, [optimizer, optimizer_dc], save_criterion='trg_psnr')
+        record.save_checkpoint(net, [optimizer, optimizer_dc], save_criterion = save_criterion)
         record.write_log()
 
 
