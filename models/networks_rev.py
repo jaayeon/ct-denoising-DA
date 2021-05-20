@@ -61,7 +61,10 @@ class Networks_rev(nn.Module):
         self.set_requires_grad(self.domain_discriminator, requires_grad=True)
 
         self.src_out, self.src_feature = self.denoiser(src)
-        self.trg_out, self.trg_feature = self.denoiser(trg)
+        self.trg_out, self.trg_feature = self.denoiser(trg) 
+
+        _, self.src_out_feature = self.denoiser(self.src_out)
+        _, self.src_lbl_feature = self.denoiser(src_lbl)
 
         if self.change_contents:
             src_out, trg_out, idx_swap = self.content_randomization(self.src_out, self.trg_out, return_idx=True)
@@ -90,7 +93,12 @@ class Networks_rev(nn.Module):
             gp_loss = self.gp(src_out.detach()-src, trg_out.detach()-trg) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'feature':
             d_src = self.domain_discriminator(src_feature.detach())
+            d_src_out = self.domain_discriminator(self.src_out_feature.detach())
+            d_src_ref = self.domain_discriminator(self.src_lbl_feature.detach())
             d_trg = self.domain_discriminator(trg_feature.detach())
+
+            self.ntrg_out, self.ntrg_feature = self.denoiser(ntrg) if ntrg != None else None, None
+            d_ntrg = self.domain_discriminator(self.ntrg_feature.detach()) if ntrg != None else torch.ones(d_trg.size()).to(self.opt.device)
             gp_loss = self.gp(src_feature.detach(), trg_feature.detach()) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'c_img': #concat2
             # d_src = self.domain_discriminator(torch.cat((src_out.detach(), src_lbl), 1))
@@ -148,9 +156,9 @@ class Networks_rev(nn.Module):
             self.set_requires_grad([self.denoiser.body2, self.denoiser.tail, self.domain_discriminator], requires_grad=False)
 
         self.src_out, self.src_feature = self.denoiser(src)
-        _, self.src_out_feature = self.denoiser(self.src_out)
-        self.src_lbl_out, self.src_lbl_feature = self.denoiser(src_lbl)
         self.trg_out, self.trg_feature = self.denoiser(trg)
+        _, self.src_out_feature = self.denoiser(self.src_out)
+        _, self.src_lbl_feature = self.denoiser(src_lbl)
 
         if not saliency:
             src_loss = self.sl_weight*self.l_criterion(self.src_out, src_lbl)
