@@ -79,21 +79,21 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_img, trg_lbl = trg_img.to(opt.device), trg_lbl.to(opt.device)
                 trg_noise = trg_noise.to(opt.device) if opt.noise else None
 
-            #domain classifier
-            if opt.pretrained:
-                dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
-            else : 
-                optimizer_dc.zero_grad()
-                net.domain_discriminator.zero_grad()
-                for _ in range(opt.n_d_train):
-                    dc_loss = net.dc_loss(src_img, src_lbl, trg_img)
-                    dc_loss.backward()
-                    optimizer_dc.step()
-                
-            #denoiser
             optimizer.zero_grad()
             net.denoiser.zero_grad()
-            loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, rev=opt.rev, saliency=opt.saliency, return_losses=True)
+            if opt.pretrained: 
+                #2nd step
+                dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
+                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, rev=opt.rev, saliency=opt.saliency, return_losses=True)
+            else : 
+                #1st step 
+                for _ in range(opt.n_d_train):
+                    optimizer_dc.zero_grad()
+                    net.domain_discriminator.zero_grad()
+                    dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
+                    dc_loss.backward()
+                    optimizer_dc.step()
+                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=None, rev=opt.rev, saliency=opt.saliency, return_losses=True)
             loss.backward()
             optimizer.step()
 
@@ -129,8 +129,12 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_noise = trg_noise.to(opt.device) if opt.noise else None
 
             with torch.no_grad():
-                dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
-                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, saliency=opt.saliency, return_losses=True)
+                if opt.pretrained:
+                    dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
+                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, saliency=opt.saliency, return_losses=True)
+                else: #1st step
+                    dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
+                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=None, saliency=opt.saliency, return_losses=True)
 
             #calculate psnr
             src_out = net.src_out
@@ -155,7 +159,6 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         record.print_average(mode='valid')
         record.save_checkpoint(net, [optimizer, optimizer_dc], save_criterion = save_criterion)
         record.write_log()
-
 
 
 
