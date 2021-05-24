@@ -94,7 +94,7 @@ class Record():
 
         if self.best_psnr < current_psnr :
             self.best_psnr = current_psnr
-            checkpoint_path = os.path.join(self.checkpoint_dir, "{}_epoch_{}_psnr_{:.8f}.pth" .format(self.model_name, str(self.epoch).zfill(4), current_psnr))
+            checkpoint_path = os.path.join(self.checkpoint_dir, "{}_epoch_{:4d}_psnr_{:.8f}.pth" .format(self.model_name, self.epoch, current_psnr))
             checkpoint_path = os.path.abspath(checkpoint_path)
             optimizers=[optimizer[i].state_dict() for i in range(len(optimizer))]
             if torch.cuda.device_count() > 1 and self.opt.multi_gpu:
