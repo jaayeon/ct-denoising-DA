@@ -131,7 +131,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             with torch.no_grad():
                 if opt.pretrained:
                     dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
-                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, saliency=opt.saliency, return_losses=True)
+                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, saliency=False, return_losses=True)
                 else: #1st step
                     dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
                     loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=None, saliency=opt.saliency, return_losses=True)

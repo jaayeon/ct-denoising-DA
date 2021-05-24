@@ -97,7 +97,7 @@ class Networks_rev(nn.Module):
             d_src_ref = self.domain_discriminator(self.src_lbl_feature.detach())
             d_trg = self.domain_discriminator(trg_feature.detach())
 
-            self.ntrg_out, self.ntrg_feature = self.denoiser(ntrg) if ntrg != None else None, None
+            self.ntrg_out, self.ntrg_feature = self.denoiser(ntrg) if ntrg != None else [None, None]
             d_ntrg = self.domain_discriminator(self.ntrg_feature.detach()) if ntrg != None else torch.ones(d_trg.size()).to(self.opt.device)
             gp_loss = self.gp(src_feature.detach(), trg_feature.detach()) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'c_img': #concat2
@@ -290,6 +290,8 @@ class Networks_rev(nn.Module):
 
     def get_saliency_map(self, net, img, loss='mse', cls_idx=0):
         img.requires_grad_()
+        for param in net.parameters():
+            param.requires_grad=True
         output = net(img)
         if loss == 'mse':
             mse=torch.nn.MSELoss()
@@ -309,4 +311,6 @@ class Networks_rev(nn.Module):
         rev_norm_saliency = reverse_saliency/max_s
 
         rev_norm_saliency.requires_grad_(False)
+        for param in net.parameters():
+            param.requires_grad=False
         return rev_norm_saliency
