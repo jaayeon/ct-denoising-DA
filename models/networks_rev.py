@@ -78,8 +78,6 @@ class Networks_rev(nn.Module):
         if self.dc_input == 'img':
             d_src = self.domain_discriminator(src_out.detach())
             d_trg = self.domain_discriminator(trg_out.detach())
-            # d_src = self.domain_discriminator(src)
-            # d_trg = self.domain_discriminator(trg)
             gp_loss = self.gp(src_out.detach(), trg_out.detach()) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'origin':
             d_src = self.domain_discriminator(src)
@@ -141,19 +139,21 @@ class Networks_rev(nn.Module):
         return loss
 
     #new version 05.06
-    def g_loss(self, src, trg, src_lbl, perceptual=True, trg_noise=None, rev=True, saliency=False, return_losses=True):
+    def g_loss(self, src, trg, src_lbl, trg_noise=None, rev=True, saliency=False, return_losses=True):
         '''
         step 1 : Supervised Learning with Denoiser L(D(src), src*) ... trg_noise=None, rev=False
         step 2 : Supervised Learning with Denoiser L(D(src|n_trg), src*|trg), Domain Classifier Adversarial Loss for Denoiser with L(DC(trg'),0) ... trg_noise=arr, rev=True
         one step : Supervised Learning with Denoiser L(D(src|n_trg), src*|trg), Domain Classifier Adversarial Loss for Denoiser with L(DC(trg'),0) ... trg_noise=arr, rev=True
         '''
 
-        if not self.dc_input == 'feature' or not self.opt.pretrained : # when in the first step or dc_input is origin (not feature) 
+        if not self.opt.pretrained or not self.dc_input == 'feature' : # when in the 1st step OR in the 2nd step without feature dc_input 
             self.set_requires_grad(self.denoiser, requires_grad=True)
             self.set_requires_grad(self.domain_discriminator, requires_grad=False)
-        elif self.dc_input=='feature' and self.opt.model == 'edsr': # pretrained (second step) and model is edsr
+        elif self.opt.pretrained and self.dc_input=='feature' and self.opt.model == 'edsr': # when in the 2nd step with feature dc_input (default model is edsr)
             self.set_requires_grad([self.denoiser.head, self.denoiser.body1], requires_grad=True)
             self.set_requires_grad([self.denoiser.body2, self.denoiser.tail, self.domain_discriminator], requires_grad=False)
+        else : 
+            raise NotImplementedError('if dc_input is feature and you are using other networks, not edsr, you have to specify network modules of required gradient')
 
         self.src_out, self.src_feature = self.denoiser(src)
         self.trg_out, self.trg_feature = self.denoiser(trg)
@@ -182,10 +182,7 @@ class Networks_rev(nn.Module):
         l_loss = src_loss + ntrg_loss
 
         #perceptual loss
-        if perceptual:
-            p_loss = p_src_loss + p_ntrg_loss
-        else:
-            p_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
+        p_loss = p_src_loss + p_ntrg_loss
         
         #domain classifier loss
         if rev and (self.dc_input == 'img' or self.dc_input == 'origin'):
@@ -295,12 +292,12 @@ class Networks_rev(nn.Module):
         output = net(img)
         if loss == 'mse':
             mse=torch.nn.MSELoss()
-            target_tensor = cls_idx*torch.ones(output.size()).to(self.opt.device)
+            target_tensor = cls_idx*torch.ones(output.size()).to(self.opt.device) #maximize the loss
             loss = mse(output, target_tensor)
             loss.backward()
         else : #bce, ce
             out_idx = output.argmax()
-            output_max=output[0, out_idx]
+            output_max=sum(output[:, out_idx])
             output_max.backward()
         saliency = img.grad.data.abs()
 

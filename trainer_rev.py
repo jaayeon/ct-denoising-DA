@@ -84,16 +84,16 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             if opt.pretrained: 
                 #2nd step
                 dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
-                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, rev=opt.rev, saliency=opt.saliency, return_losses=True)
+                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=trg_noise, rev=opt.rev, saliency=opt.saliency, return_losses=True)
             else : 
                 #1st step 
                 for _ in range(opt.n_d_train):
                     optimizer_dc.zero_grad()
                     net.domain_discriminator.zero_grad()
-                    dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
+                    dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise) #dc_input : src, src', src*, trg (, ntrg)
                     dc_loss.backward()
                     optimizer_dc.step()
-                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=None, rev=opt.rev, saliency=opt.saliency, return_losses=True)
+                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=None, rev=opt.rev, saliency=False, return_losses=True) #only src loss without saliency mask
             loss.backward()
             optimizer.step()
 
@@ -130,11 +130,13 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
             with torch.no_grad():
                 if opt.pretrained:
+                    #2nd step
                     dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
-                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=trg_noise, saliency=False, return_losses=True)
-                else: #1st step
+                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=trg_noise, saliency=False, return_losses=True)
+                else: 
+                    #1st step
                     dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
-                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, perceptual=True, trg_noise=None, saliency=opt.saliency, return_losses=True)
+                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=None, saliency=False, return_losses=True)
 
             #calculate psnr
             src_out = net.src_out
