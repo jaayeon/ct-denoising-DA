@@ -48,7 +48,7 @@ class Networks_rev(nn.Module):
             class_num = 1
             pass
 
-        self.domain_discriminator = Discriminator(input_size, self.dc_channel, class_num=class_num)
+        self.domain_discriminator = Discriminator(input_size, self.dc_channel, class_num=class_num, norm=opt.norm)
         self.feature_extractor = FeatureExtractor()
 
         self.vgg_weight = opt.vgg_weight #perceptual loss weight

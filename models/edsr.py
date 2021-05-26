@@ -11,6 +11,7 @@ class EDSR(nn.Module):
     def __init__(self, opt, conv=common.default_conv):
         super(EDSR, self).__init__()
         self.rev = False
+        self.norm = opt.norm
         n_resblocks = opt.n_resblocks
         n_feats = 96
         kernel_size = 3 
@@ -50,7 +51,8 @@ class EDSR(nn.Module):
         self.tail = nn.Sequential(*m_tail)
 
     def forward(self, x):
-        # x = self.sub_mean(x)
+        if self.norm: 
+            x = self.sub_mean(x)
         global_res = x
         
         x = self.head(x)
@@ -60,7 +62,8 @@ class EDSR(nn.Module):
         out = self.tail(res)
         
         out += global_res
-        # out = self.add_mean(out)
+        if self.norm:
+            out = self.add_mean(out)
         if self.rev : 
             return out, feature
         else : 

@@ -4,9 +4,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.models import vgg19
 import random
+from models.convs import common
 
 def set_model(opt):
-
     if opt.way == 'base':
         module_name = 'models.networks_base'
     elif opt.way == 'rev':
@@ -60,9 +60,11 @@ class FeatureExtractor(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, input_size, input_channels, class_num=1):
+    def __init__(self, input_size, input_channels, class_num=1, norm=False):
         super(Discriminator, self).__init__()
         self.input_size = input_size
+        self.norm = norm
+        self.sub_mean = common.MeanShift(pixel_range=1, n_channels=1)
         def conv_output_size(input_size, kernel_size_list, stride_list):
             n=input_size
             for k, s in zip(kernel_size_list, stride_list):
@@ -90,6 +92,10 @@ class Discriminator(nn.Module):
         self.lrelu = nn.LeakyReLU()
 
     def forward(self, x):
+        if x.size()[1] == 1 and self.norm: #if x is image, not feature --> normalize to (m=0.5,std=1)
+            x = self.sub_mean(x)
+        else : 
+            pass
         x = self.random_crop(x)
         out = self.net(x)
         out = out.view(-1, 256*self.output_size*self.output_size)
