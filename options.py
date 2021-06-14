@@ -176,8 +176,8 @@ parser.add_argument("--start_epoch", type=int, default=1,
 parser.add_argument('--batch_size', type=int, default=32,
                     help='Size of the batches')
 parser.add_argument('--n_epochs', type=int, default=200)
-parser.add_argument('--weight_decay', type=float, default= 0, help='0.0001')
-parser.add_argument('--weight_decay_dc', type=float, default= 0, help='0.1')
+parser.add_argument('--weight_decay', type=float, default= 0.0, help='0.0001')
+parser.add_argument('--weight_decay_dc', type=float, default= 0.0, help='0.1')
 
 
 

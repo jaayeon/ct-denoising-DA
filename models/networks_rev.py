@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from . import get_base_model, FeatureExtractor, Discriminator
+from . import get_base_model, FeatureExtractor, Discriminator, NLayerDiscriminator
 
 from models.convs import common
 
@@ -22,6 +22,9 @@ class Networks_rev(nn.Module):
         self.dc_mode = opt.dc_mode
         self.opt = opt
         input_size = opt.patch_size
+
+        self.src_param = [0.250, 0.327] #phantom ge chest, pelvis's mean, std
+        self.trg_param = [0.377, 0.338] #mayo 1,3mm's mean, std
 
         if self.dc_input =='c_img' or self.dc_input == 'c_noise':
             self.dc_channel = 2*opt.n_channels
@@ -48,7 +51,8 @@ class Networks_rev(nn.Module):
             class_num = 1
             pass
 
-        self.domain_discriminator = Discriminator(input_size, self.dc_channel, class_num=class_num, norm=opt.norm)
+        # self.domain_discriminator = Discriminator(input_size, self.dc_channel, class_num=class_num, norm=opt.norm)
+        self.domain_discriminator = NLayerDiscriminator(self.dc_channel, norm_layer=nn.InstanceNorm2d)
         self.feature_extractor = FeatureExtractor()
 
         self.vgg_weight = opt.vgg_weight #perceptual loss weight
@@ -60,20 +64,20 @@ class Networks_rev(nn.Module):
         self.set_requires_grad(self.denoiser, requires_grad=False)
         self.set_requires_grad(self.domain_discriminator, requires_grad=True)
 
-        self.src_out, self.src_feature = self.denoiser(src)
-        self.trg_out, self.trg_feature = self.denoiser(trg) 
+        # self.src_out, self.src_feature = self.denoiser(src, param=self.src_param)
+        # self.trg_out, self.trg_feature = self.denoiser(trg, param=self.trg_param) 
 
-        _, self.src_out_feature = self.denoiser(self.src_out)
-        _, self.src_lbl_feature = self.denoiser(src_lbl)
+        # _, self.src_out_feature = self.denoiser(self.src_out, param=self.src_param)
+        # _, self.src_lbl_feature = self.denoiser(src_lbl, param=self.src_param)
 
-        if self.change_contents:
-            src_out, trg_out, idx_swap = self.content_randomization(self.src_out, self.trg_out, return_idx=True)
-            src_lbl, trg_out = self.content_randomization(src_lbl, self.trg_out, idx_swap=idx_swap)
-            src_feature, trg_feature = self.content_randomization(self.src_feature, self.trg_feature)
-            src, trg = self.content_randomization(src, trg, idx_swap=idx_swap)
-        else : 
-            src_out, trg_out = self.src_out, self.trg_out
-            src_feature, trg_feature = self.src_feature, self.trg_feature
+        # if self.change_contents:
+        #     src_out, trg_out, idx_swap = self.content_randomization(self.src_out, self.trg_out, return_idx=True)
+        #     src_lbl, trg_out = self.content_randomization(src_lbl, self.trg_out, idx_swap=idx_swap)
+        #     src_feature, trg_feature = self.content_randomization(self.src_feature, self.trg_feature)
+        #     src, trg = self.content_randomization(src, trg, idx_swap=idx_swap)
+        # else : 
+        #     src_out, trg_out = self.src_out, self.trg_out
+        #     src_feature, trg_feature = self.src_feature, self.trg_feature
 
         if self.dc_input == 'img':
             d_src = self.domain_discriminator(src_out.detach())
@@ -81,10 +85,10 @@ class Networks_rev(nn.Module):
             gp_loss = self.gp(src_out.detach(), trg_out.detach()) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'origin':
             d_src = self.domain_discriminator(src)
-            d_src_out = self.domain_discriminator(src_out.detach())
-            d_src_ref = self.domain_discriminator(src_lbl)
+            # d_src_out = self.domain_discriminator(src_out.detach())
+            # d_src_ref = self.domain_discriminator(src_lbl)
             d_trg = self.domain_discriminator(trg)
-            d_ntrg = self.domain_discriminator(ntrg) if ntrg != None else torch.ones(d_trg.size()).to(self.opt.device)
+            # d_ntrg = self.domain_discriminator(ntrg) if ntrg != None else torch.ones(d_trg.size()).to(self.opt.device)
         elif self.dc_input == 'noise': #src_out
             d_src = self.domain_discriminator(src_out.detach()-src)
             d_trg = self.domain_discriminator(trg_out.detach()-trg)
@@ -95,7 +99,7 @@ class Networks_rev(nn.Module):
             d_src_ref = self.domain_discriminator(self.src_lbl_feature.detach())
             d_trg = self.domain_discriminator(trg_feature.detach())
 
-            self.ntrg_out, self.ntrg_feature = self.denoiser(ntrg) if ntrg != None else [None, None]
+            self.ntrg_out, self.ntrg_feature = self.denoiser(ntrg, param=self.trg_param) if ntrg != None else [None, None]
             d_ntrg = self.domain_discriminator(self.ntrg_feature.detach()) if ntrg != None else torch.ones(d_trg.size()).to(self.opt.device)
             gp_loss = self.gp(src_feature.detach(), trg_feature.detach()) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'c_img': #concat2
@@ -117,8 +121,8 @@ class Networks_rev(nn.Module):
         if self.dc_mode in ['mse', 'bce']:
             trg_class = self.get_tensor(d_trg, 1, loss=self.dc_mode)
             src_class = self.get_tensor(d_src, 0, loss=self.dc_mode)
-            loss = 0.2*(self.dc_criterion(d_trg, trg_class) + self.dc_criterion(d_ntrg, trg_class) + self.dc_criterion(d_src, src_class) + self.dc_criterion(d_src_out, src_class) + self.dc_criterion(d_src_ref, src_class))
-            # loss = 0.5*(self.dc_criterion(d_trg, trg_class) + self.dc_criterion(d_src, src_class))
+            # loss = 0.2*(self.dc_criterion(d_trg, trg_class) + self.dc_criterion(d_ntrg, trg_class) + self.dc_criterion(d_src, src_class) + self.dc_criterion(d_src_out, src_class) + self.dc_criterion(d_src_ref, src_class))
+            loss = 0.5*(self.dc_criterion(d_trg, trg_class) + self.dc_criterion(d_src, src_class))
         elif self.dc_mode == 'ce':
             src_class = self.get_tensor(d_src, 0, loss=self.dc_mode)
             trg_class = self.get_tensor(d_trg, 1, loss=self.dc_mode)
@@ -155,10 +159,12 @@ class Networks_rev(nn.Module):
         else : 
             raise NotImplementedError('if dc_input is feature and you are using other networks, not edsr, you have to specify network modules of required gradient')
 
+        # self.src_out, self.src_feature = self.denoiser(src, param=self.src_param)
+        # self.trg_out, self.trg_feature = self.denoiser(trg, param=self.trg_param)
         self.src_out, self.src_feature = self.denoiser(src)
         self.trg_out, self.trg_feature = self.denoiser(trg)
-        _, self.src_out_feature = self.denoiser(self.src_out)
-        _, self.src_lbl_feature = self.denoiser(src_lbl)
+        # _, self.src_out_feature = self.denoiser(self.src_out, param=self.src_param)
+        # _, self.src_lbl_feature = self.denoiser(src_lbl, param=self.src_param)
 
         if not saliency:
             src_loss = self.sl_weight*self.l_criterion(self.src_out, src_lbl)
@@ -174,13 +180,13 @@ class Networks_rev(nn.Module):
                 p_src_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
         if not trg_noise == None:
             self.n_trg_out, _ = self.denoiser(trg_noise)
+            # self.n_trg_out, _ = self.denoiser(trg_noise, param=self.trg_param)
             ntrg_loss = self.tl_weight*self.l_criterion(self.n_trg_out, trg)
             p_ntrg_loss = self.tl_weight*self.vgg_weight*self.p_loss(self.n_trg_out, trg)
         else : 
             ntrg_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
             p_ntrg_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
         l_loss = src_loss + ntrg_loss
-
         #perceptual loss
         p_loss = p_src_loss + p_ntrg_loss
         
@@ -208,7 +214,7 @@ class Networks_rev(nn.Module):
             trg_class = self.get_tensor(d_trg, 1)
             src_class = self.get_tensor(d_src, 1)
             # domain_loss = self.rev_weight * self.dc_criterion(d_trg, trg_class)
-            domain_loss = self.rev_weight * (0.5*self.dc_criterion(d_trg, trg_class)+0.5*self.dc_criterion(d_src, src_class))
+            domain_loss = self.rev_weight * 0.5*(self.dc_criterion(d_trg, trg_class)+self.dc_criterion(d_src, src_class))
         elif rev : #wss
             domain_loss = -self.rev_weight * torch.mean(d_trg) #not sure,, changed src->trg
         else : 

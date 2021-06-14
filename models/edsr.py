@@ -50,9 +50,9 @@ class EDSR(nn.Module):
         self.body2 = nn.Sequential(*m_body2)
         self.tail = nn.Sequential(*m_tail)
 
-    def forward(self, x):
+    def forward(self, x, param=[0.5,1]):
         if self.norm: 
-            x = self.sub_mean(x)
+            x = self.sub_mean(x, mean=param[0], std=param[1])
         global_res = x
         
         x = self.head(x)
@@ -63,7 +63,7 @@ class EDSR(nn.Module):
         
         out += global_res
         if self.norm:
-            out = self.add_mean(out)
+            out = self.add_mean(out, mean=param[0], std=param[1])
         if self.rev : 
             return out, feature
         else : 
