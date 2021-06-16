@@ -3,13 +3,17 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import functools
 from . import get_base_model, FeatureExtractor, Discriminator, NLayerDiscriminator
 
 from models.convs import common
 
 def make_model(opt):
     return Networks_rev(opt)
-    
+
+class Identity(nn.Module):
+    def forward(self, x):
+        return x
 
 class Networks_rev(nn.Module):
     def __init__(self, opt):
@@ -50,9 +54,10 @@ class Networks_rev(nn.Module):
         elif self.dc_mode == 'wss':
             class_num = 1
             pass
-
-        # self.domain_discriminator = Discriminator(input_size, self.dc_channel, class_num=class_num, norm=opt.norm)
-        self.domain_discriminator = NLayerDiscriminator(self.dc_channel, norm_layer=nn.InstanceNorm2d)
+        
+        norm_layer = self.get_norm_layer(norm_type=opt.norm)
+        # self.domain_discriminator = Discriminator(input_size, self.dc_channel, class_num=class_num, norm=opt.input_norm)
+        self.domain_discriminator = NLayerDiscriminator(self.dc_channel, norm_layer=norm_layer, norm=self.input_norm)
         self.feature_extractor = FeatureExtractor()
 
         self.vgg_weight = opt.vgg_weight #perceptual loss weight
@@ -85,9 +90,12 @@ class Networks_rev(nn.Module):
             gp_loss = self.gp(src_out.detach(), trg_out.detach()) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'origin':
             d_src = self.domain_discriminator(src)
+            # d_src = self.domain_discriminator(src, param=self.src_param)
+            d_trg = self.domain_discriminator(trg)
+            # d_trg = self.domain_discriminator(trg, param=self.trg_param)
+
             # d_src_out = self.domain_discriminator(src_out.detach())
             # d_src_ref = self.domain_discriminator(src_lbl)
-            d_trg = self.domain_discriminator(trg)
             # d_ntrg = self.domain_discriminator(ntrg) if ntrg != None else torch.ones(d_trg.size()).to(self.opt.device)
         elif self.dc_input == 'noise': #src_out
             d_src = self.domain_discriminator(src_out.detach()-src)
@@ -194,6 +202,8 @@ class Networks_rev(nn.Module):
         if rev and (self.dc_input == 'img' or self.dc_input == 'origin'):
             d_trg = self.domain_discriminator(self.trg_out)
             d_src = self.domain_discriminator(self.src_out)
+            # d_trg = self.domain_discriminator(self.trg_out, param=self.trg_param)
+            # d_src = self.domain_discriminator(self.src_out, param=self.src_param)
         elif rev and self.dc_input == 'noise':
             d_trg = self.domain_discriminator(self.trg_out-trg)
             d_src = self.domain_discriminator(self.src_out-src)
@@ -317,3 +327,22 @@ class Networks_rev(nn.Module):
         for param in net.parameters():
             param.requires_grad=False
         return rev_norm_saliency
+
+    def get_norm_layer(self, norm_type='instance'):
+        """Return a normalization layer
+
+        Parameters:
+            norm_type (str) -- the name of the normalization layer: batch | instance | none
+
+        For BatchNorm, we use learnable affine parameters and track running statistics (mean/stddev).
+        For InstanceNorm, we do not use learnable affine parameters. We do not track running statistics.
+        """
+        if norm_type == 'batch':
+            norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
+        elif norm_type == 'instance':
+            norm_layer = functools.partial(nn.InstanceNorm2d, affine=False, track_running_stats=True)
+        elif norm_type == 'none':
+            def norm_layer(x): return Identity()
+        else:
+            raise NotImplementedError('normalization layer [%s] is not found' % norm_type)
+        return norm_layer

@@ -14,7 +14,6 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     opt= set_gpu(opt)
     print('Initialize networks for training')
     net = set_model(opt)
-    net_dc = set_model(opt)
     print(net)
     
     print("Setting Optimizer")
@@ -32,9 +31,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         opt.start_epoch, net, optimizers = load_model(opt, net, optimizer=[optimizer, optimizer_dc])
         optimizer, optimizer_dc = optimizers[0], optimizers[1]
     elif opt.pretrained : 
-        net, _ = load_model(opt, net) #denoiser
-        net_dc, _ = load_model(opt, net) #domain classifier
-        net.domain_discriminator = net_dc.domain_discriminator
+        net, _ = load_model(opt, net)
         set_checkpoint_dir(opt)
     else : 
         set_checkpoint_dir(opt)
@@ -43,8 +40,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         net.denoiser = nn.DataParallel(net.denoiser)
         net.domain_discriminator = nn.DataParallel(net.domain_discriminator)
 
-    # scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=20, mode='min')
-    # scheduler_dc = ReduceLROnPlateau(optimizer_dc, factor=0.5, patience=20, mode='min')
+    scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=20, mode='min')
+    scheduler_dc = ReduceLROnPlateau(optimizer_dc, factor=0.5, patience=20, mode='min')
 
     # if opt.start_epoch == 1:
     keys = ['loss', 'lloss', 'ploss', 'revloss', 'dcloss', 'src_psnr', 'nsrc_psnr', 'trg_psnr', 'ntrg_psnr']
@@ -82,13 +79,14 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_img, trg_lbl = trg_img.to(opt.device), trg_lbl.to(opt.device)
                 trg_noise = trg_noise.to(opt.device) if opt.noise else None
 
-            net.denoiser.zero_grad()
-            net.domain_discriminator.zero_grad()
-            optimizer.zero_grad()
             optimizer_dc.zero_grad()
+            net.domain_discriminator.zero_grad()
             if opt.pretrained: 
                 #2nd step
                 dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
+
+                optimizer.zero_grad()
+                net.denoiser.zero_grad()
                 loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=trg_noise, rev=opt.rev, saliency=opt.saliency, return_losses=True)
             else : 
                 #1st step 
@@ -96,6 +94,9 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                     dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise) #dc_input : src, src', src*, trg (, ntrg)
                     dc_loss.backward()
                     optimizer_dc.step()
+
+                optimizer.zero_grad()
+                net.denoiser.zero_grad()
                 loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=None, rev=opt.rev, saliency=False, return_losses=True) #only src loss without saliency mask
             loss.backward()
             optimizer.step()
@@ -135,11 +136,11 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 if opt.pretrained:
                     #2nd step
                     dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
-                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=trg_noise, saliency=False, return_losses=True)
+                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=trg_noise, rev=opt.rev, saliency=False, return_losses=True)
                 else: 
                     #1st step
                     dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
-                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=None, saliency=False, return_losses=True)
+                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=None, rev=opt.rev, saliency=False, return_losses=True)
 
             #calculate psnr
             src_out = net.src_out
@@ -158,8 +159,8 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
             record.update_status(status, mode='valid')
             record.print_buffer(mode='valid')
         
-        # scheduler.step(mse_loss)
-        # scheduler_dc.step(mse_loss)
+        scheduler.step(mse_loss)
+        scheduler_dc.step(mse_loss)
 
         record.print_average(mode='valid')
         record.save_checkpoint(net, [optimizer, optimizer_dc], save_criterion = save_criterion)

@@ -11,7 +11,7 @@ class EDSR(nn.Module):
     def __init__(self, opt, conv=common.default_conv):
         super(EDSR, self).__init__()
         self.rev = False
-        self.norm = opt.norm
+        self.norm = opt.input_norm
         n_resblocks = opt.n_resblocks
         n_feats = 96
         kernel_size = 3 

@@ -60,8 +60,10 @@ class FeatureExtractor(nn.Module):
         return x
 
 class NLayerDiscriminator(nn.Module):
-    def __init__(self, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, use_sigmoid=False):
+    def __init__(self, input_nc, ndf=32, n_layers=3, norm_layer=nn.BatchNorm2d, norm=False, use_sigmoid=False):
         super(NLayerDiscriminator, self).__init__()
+        self.norm = norm
+        self.sub_mean = common.MeanShift(pixel_range=1, n_channels=1)
         if type(norm_layer)==functools.partial: #no need to use bias as BatchNorm2d has affine parameters
             use_bias = norm_layer.func==nn.InstanceNorm2d
         else :
@@ -81,7 +83,7 @@ class NLayerDiscriminator(nn.Module):
             ]
         
         nf_mult_prev=nf_mult
-        mf_mult=min(2**n_layers, 8)
+        nf_mult=min(2**n_layers, 8)
         sequence += [
             nn.Conv2d(ndf*nf_mult_prev, ndf*nf_mult, kernel_size=kw, stride=1, padding=padw, bias=use_bias),
             norm_layer(ndf*nf_mult),
@@ -94,7 +96,11 @@ class NLayerDiscriminator(nn.Module):
             sequence += [nn.Sigmoid()]
         self.model = nn.Sequential(*sequence)
 
-    def forward(self, input):
+    def forward(self, input, param=[0.5,1]):
+        if input.size()[1] == 1 and self.norm: #if x is image, not feature --> normalize to (m=0.5,std=1)
+            input = self.sub_mean(input, mean=param[0], std=param[1])
+        else : 
+            pass
         return self.model(input)
 
 class Discriminator(nn.Module):
@@ -129,9 +135,9 @@ class Discriminator(nn.Module):
         self.fc2 = nn.Linear(1024, class_num)
         self.lrelu = nn.LeakyReLU()
 
-    def forward(self, x):
+    def forward(self, x, param=[0.5,1]):
         if x.size()[1] == 1 and self.norm: #if x is image, not feature --> normalize to (m=0.5,std=1)
-            x = self.sub_mean(x)
+            x = self.sub_mean(x, mean=param[0], std=param[1])
         else : 
             pass
         x = self.random_crop(x)

@@ -110,7 +110,8 @@ parser.add_argument('--mA_low', '-l',type=str, default='level5', choices = ['lev
 
 #model common
 parser.add_argument('--bn', default=False, action='store_true', help='batch normalization')
-parser.add_argument('--norm', default=False, action='store_true', help='normalization input')
+parser.add_argument('--input_norm', default=False, action='store_true', help='normalization input')
+parser.add_argument('--norm', default='none', choices=['none', 'batch', 'instance'], help='normalization type of domain classifier')
 
 #edsr
 parser.add_argument('--res_scale', type=float, default=1,
