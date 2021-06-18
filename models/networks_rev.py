@@ -56,7 +56,7 @@ class Networks_rev(nn.Module):
             pass
         
         norm_layer = self.get_norm_layer(norm_type=opt.norm)
-        # self.domain_discriminator = Discriminator(input_size, self.dc_channel, class_num=class_num, norm=opt.input_norm)
+        # self.domain_discriminator = Discriminator(input_size, self.dc_channel, class_num=class_num, norm_layer=norm_layer, norm=opt.input_norm)
         self.domain_discriminator = NLayerDiscriminator(self.dc_channel, norm_layer=norm_layer, norm=self.input_norm)
         self.feature_extractor = FeatureExtractor()
 
@@ -89,10 +89,10 @@ class Networks_rev(nn.Module):
             d_trg = self.domain_discriminator(trg_out.detach())
             gp_loss = self.gp(src_out.detach(), trg_out.detach()) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'origin':
-            d_src = self.domain_discriminator(src)
-            # d_src = self.domain_discriminator(src, param=self.src_param)
-            d_trg = self.domain_discriminator(trg)
-            # d_trg = self.domain_discriminator(trg, param=self.trg_param)
+            # d_src = self.domain_discriminator(src)
+            d_src = self.domain_discriminator(src, param=self.src_param)
+            # d_trg = self.domain_discriminator(trg)
+            d_trg = self.domain_discriminator(trg, param=self.trg_param)
 
             # d_src_out = self.domain_discriminator(src_out.detach())
             # d_src_ref = self.domain_discriminator(src_lbl)
@@ -167,10 +167,10 @@ class Networks_rev(nn.Module):
         else : 
             raise NotImplementedError('if dc_input is feature and you are using other networks, not edsr, you have to specify network modules of required gradient')
 
-        # self.src_out, self.src_feature = self.denoiser(src, param=self.src_param)
-        # self.trg_out, self.trg_feature = self.denoiser(trg, param=self.trg_param)
-        self.src_out, self.src_feature = self.denoiser(src)
-        self.trg_out, self.trg_feature = self.denoiser(trg)
+        self.src_out, self.src_feature = self.denoiser(src, param=self.src_param)
+        self.trg_out, self.trg_feature = self.denoiser(trg, param=self.trg_param)
+        # self.src_out, self.src_feature = self.denoiser(src)
+        # self.trg_out, self.trg_feature = self.denoiser(trg)
         # _, self.src_out_feature = self.denoiser(self.src_out, param=self.src_param)
         # _, self.src_lbl_feature = self.denoiser(src_lbl, param=self.src_param)
 
@@ -200,10 +200,10 @@ class Networks_rev(nn.Module):
         
         #domain classifier loss
         if rev and (self.dc_input == 'img' or self.dc_input == 'origin'):
-            d_trg = self.domain_discriminator(self.trg_out)
-            d_src = self.domain_discriminator(self.src_out)
-            # d_trg = self.domain_discriminator(self.trg_out, param=self.trg_param)
-            # d_src = self.domain_discriminator(self.src_out, param=self.src_param)
+            # d_trg = self.domain_discriminator(self.trg_out)
+            # d_src = self.domain_discriminator(self.src_out)
+            d_trg = self.domain_discriminator(self.trg_out, param=self.trg_param)
+            d_src = self.domain_discriminator(self.src_out, param=self.src_param)
         elif rev and self.dc_input == 'noise':
             d_trg = self.domain_discriminator(self.trg_out-trg)
             d_src = self.domain_discriminator(self.src_out-src)

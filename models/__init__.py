@@ -60,7 +60,7 @@ class FeatureExtractor(nn.Module):
         return x
 
 class NLayerDiscriminator(nn.Module):
-    def __init__(self, input_nc, ndf=32, n_layers=3, norm_layer=nn.BatchNorm2d, norm=False, use_sigmoid=False):
+    def __init__(self, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, norm=False, use_sigmoid=False):
         super(NLayerDiscriminator, self).__init__()
         self.norm = norm
         self.sub_mean = common.MeanShift(pixel_range=1, n_channels=1)
@@ -104,10 +104,16 @@ class NLayerDiscriminator(nn.Module):
         return self.model(input)
 
 class Discriminator(nn.Module):
-    def __init__(self, input_size, input_channels, class_num=1, norm=False):
+    def __init__(self, input_size, input_channels, class_num=1, norm_layer=nn.BatchNorm2d, norm=False):
         super(Discriminator, self).__init__()
         self.input_size = input_size
         self.norm = norm
+
+        if type(norm_layer)==functools.partial: #no need to use bias as BatchNorm2d has affine parameters
+            use_bias = norm_layer.func==nn.InstanceNorm2d
+        else :
+            use_bias = norm_layer==nn.InstanceNorm2d
+
         self.sub_mean = common.MeanShift(pixel_range=1, n_channels=1)
         def conv_output_size(input_size, kernel_size_list, stride_list):
             n=input_size
@@ -116,9 +122,10 @@ class Discriminator(nn.Module):
                 n = (n - k + 2*1) // s + 1
             return n
 
-        def add_block(layers, ch_in, ch_out, stride):
+        def add_block(layers, ch_in, ch_out, stride, use_bias, norm_layer=nn.BatchNorm2d):
             # layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 0))
-            layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 1))
+            layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 1, bias=use_bias))
+            layers.append(norm_layer(ch_out))
             layers.append(nn.LeakyReLU())
             return layers
 
@@ -126,7 +133,7 @@ class Discriminator(nn.Module):
         # ch_stride_set = [(input_channels,64,1),(64,64,2),(64,128,1),(128,128,2),(128,256,1),(256,256,2)]
         ch_stride_set = [(input_channels,64,1),(64,128,2),(128,256,1)]
         for ch_in, ch_out, stride in ch_stride_set:
-            add_block(layers, ch_in, ch_out, stride)
+            add_block(layers, ch_in, ch_out, stride, use_bias, norm_layer=norm_layer)
 
         # self.output_size = conv_output_size(input_size, [3]*6, [1,2]*3)
         self.output_size = conv_output_size(input_size, [3]*3, [1,2,1])

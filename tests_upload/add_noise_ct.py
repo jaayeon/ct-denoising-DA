@@ -57,12 +57,11 @@ if __name__ == "__main__":
                 arr = img[j,:,:]
                 n_arr = nimg[j,:,:]
 
-                # arr_norm = (arr-np.min(arr))/(np.max(arr)-np.min(arr))
-                # n_arr_norm = (n_arr-np.min(arr))/(np.max(arr)-np.min(arr)) #min, max which are based on n_arr make distribution scale differences btw arr,n_arr
-
-                arr_norm = arr/23.0
-                n_arr_norm = n_arr/23.0 #min, max which are based on n_arr make distribution scale differences btw arr,n_arr
-
+                #calculate linear parameters
+                qm, qstd = np.mean(qimg), np.std(qimg)
+                am, astd = np.mean(arr), np.std(arr)
+                arr_norm = qstd*(arr-am)/astd+qm 
+                n_arr_norm = qstd*(n_arr-am)/astd+qm
                 noise = n_arr_norm-arr_norm
 
                 #add noise

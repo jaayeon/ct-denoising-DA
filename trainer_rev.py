@@ -31,7 +31,9 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         opt.start_epoch, net, optimizers = load_model(opt, net, optimizer=[optimizer, optimizer_dc])
         optimizer, optimizer_dc = optimizers[0], optimizers[1]
     elif opt.pretrained : 
-        net, _ = load_model(opt, net)
+        net, _ = load_model(opt, net) #dc
+        # net_g, _ = load_model(opt, net) #denoiser
+        # net.denoiser = net_g.denoiser
         set_checkpoint_dir(opt)
     else : 
         set_checkpoint_dir(opt)
