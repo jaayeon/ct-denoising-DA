@@ -110,7 +110,8 @@ parser.add_argument('--mA_low', '-l',type=str, default='level5', choices = ['lev
 
 #model common
 parser.add_argument('--bn', default=False, action='store_true', help='batch normalization')
-parser.add_argument('--norm', default=False, action='store_true', help='normalization input')
+parser.add_argument('--input_norm', default=False, action='store_true', help='normalization input')
+parser.add_argument('--norm', default='none', choices=['none', 'batch', 'instance'], help='normalization type of domain classifier')
 
 #edsr
 parser.add_argument('--res_scale', type=float, default=1,
@@ -176,8 +177,8 @@ parser.add_argument("--start_epoch", type=int, default=1,
 parser.add_argument('--batch_size', type=int, default=32,
                     help='Size of the batches')
 parser.add_argument('--n_epochs', type=int, default=200)
-parser.add_argument('--weight_decay', type=float, default= 0, help='0.0001')
-parser.add_argument('--weight_decay_dc', type=float, default= 0, help='0.1')
+parser.add_argument('--weight_decay', type=float, default= 0.0, help='0.0001')
+parser.add_argument('--weight_decay_dc', type=float, default= 0.0, help='0.1')
 
 
 

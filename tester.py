@@ -22,6 +22,12 @@ def run_test(opt, img_list, gt_img_list):
     net = set_model(opt)
     _, net, _ = load_model(opt, net)
     print(net)
+    if opt.target=='mayo':
+        param=[0.377, 0.338]
+    elif opt.target=='ge':
+        param = [0.250, 0.327]
+    else : 
+        raise NotImplementedError()
 
     opt = set_gpu(opt)
 
@@ -108,9 +114,9 @@ def run_test(opt, img_list, gt_img_list):
                         out_tensor[i] = forward_ensemble(input_tensor[i:i+1], net=net, device=opt.device)
                 else:
                     if 'rev' in opt.way:
-                        out_tensor,_ = net(input_tensor)
+                        out_tensor,_ = net(input_tensor, param=param)
                     else : 
-                        out_tensor = net(input_tensor)
+                        out_tensor = net(input_tensor, param=param)
                 # print("out_tensor:", out_tensor.size())
 
                 out_tensor = out_tensor.to(opt.device)

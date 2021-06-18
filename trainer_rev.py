@@ -31,7 +31,9 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         opt.start_epoch, net, optimizers = load_model(opt, net, optimizer=[optimizer, optimizer_dc])
         optimizer, optimizer_dc = optimizers[0], optimizers[1]
     elif opt.pretrained : 
-        net, _ = load_model(opt, net)
+        net, _ = load_model(opt, net) #dc
+        # net_g, _ = load_model(opt, net) #denoiser
+        # net.denoiser = net_g.denoiser
         set_checkpoint_dir(opt)
     else : 
         set_checkpoint_dir(opt)
@@ -79,20 +81,24 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_img, trg_lbl = trg_img.to(opt.device), trg_lbl.to(opt.device)
                 trg_noise = trg_noise.to(opt.device) if opt.noise else None
 
-            optimizer.zero_grad()
-            net.denoiser.zero_grad()
+            optimizer_dc.zero_grad()
+            net.domain_discriminator.zero_grad()
             if opt.pretrained: 
                 #2nd step
                 dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
+
+                optimizer.zero_grad()
+                net.denoiser.zero_grad()
                 loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=trg_noise, rev=opt.rev, saliency=opt.saliency, return_losses=True)
             else : 
                 #1st step 
                 for _ in range(opt.n_d_train):
-                    optimizer_dc.zero_grad()
-                    net.domain_discriminator.zero_grad()
                     dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise) #dc_input : src, src', src*, trg (, ntrg)
                     dc_loss.backward()
                     optimizer_dc.step()
+
+                optimizer.zero_grad()
+                net.denoiser.zero_grad()
                 loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=None, rev=opt.rev, saliency=False, return_losses=True) #only src loss without saliency mask
             loss.backward()
             optimizer.step()
@@ -132,11 +138,11 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 if opt.pretrained:
                     #2nd step
                     dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
-                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=trg_noise, saliency=False, return_losses=True)
+                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=trg_noise, rev=opt.rev, saliency=False, return_losses=True)
                 else: 
                     #1st step
                     dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
-                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=None, saliency=False, return_losses=True)
+                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=None, rev=opt.rev, saliency=False, return_losses=True)
 
             #calculate psnr
             src_out = net.src_out
