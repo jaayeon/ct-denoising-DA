@@ -57,7 +57,7 @@ class Networks_rev(nn.Module):
         
         norm_layer = self.get_norm_layer(norm_type=opt.norm)
         # self.domain_discriminator = Discriminator(input_size, self.dc_channel, class_num=class_num, norm_layer=norm_layer, norm=opt.input_norm)
-        self.domain_discriminator = NLayerDiscriminator(self.dc_channel, norm_layer=norm_layer, norm=self.input_norm)
+        self.domain_discriminator = NLayerDiscriminator(self.dc_channel, norm_layer=norm_layer, norm=opt.input_norm)
         self.feature_extractor = FeatureExtractor()
 
         self.vgg_weight = opt.vgg_weight #perceptual loss weight
