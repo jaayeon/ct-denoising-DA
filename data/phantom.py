@@ -48,8 +48,8 @@ class PHANTOM(PatchData):
         self.dir_lr = []
         for at in self.anatomy: 
             self.apath = os.path.join(data_dir, self.mode, 'phantom', self.dataset)
-            self.dir_hr.append(os.path.join(self.apath, at, '{}*_crop320'.format(self.mA_full)))
-            self.dir_lr.append(os.path.join(self.apath, at, '{}*_crop320'.format(self.mA_low)))    
+            self.dir_hr.append(os.path.join(self.apath, at, '{}*_crop'.format(self.mA_full)))
+            self.dir_lr.append(os.path.join(self.apath, at, '{}*_crop'.format(self.mA_low)))    
         self.ext = ('.tiff', '.tiff')
 
         for i in range(len(self.dir_hr)):

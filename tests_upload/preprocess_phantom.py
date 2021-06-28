@@ -12,7 +12,8 @@ def change_os_slash(dir_name):
     return out_dir_name
 
 # ge_pth = '../../data/denoising/train/phantom/ge/chest'
-ge_pth = '../../data/denoising/train/phantom/ge/pelvis'
+# ge_pth = '../../data/denoising/train/phantom/ge/pelvis'
+ge_pth = '../../data/denoising/test/phantom/ge/pelvis'
 
 #before run this code,
 #you have to delete phantom images below..

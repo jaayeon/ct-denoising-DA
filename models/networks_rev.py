@@ -89,9 +89,9 @@ class Networks_rev(nn.Module):
             d_trg = self.domain_discriminator(trg_out.detach())
             gp_loss = self.gp(src_out.detach(), trg_out.detach()) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'origin':
-            # d_src = self.domain_discriminator(src)
+            # input = torch.cat((src, trg), 0)
+            # d_input = self.domain_discriminator(input)
             d_src = self.domain_discriminator(src, param=self.src_param)
-            # d_trg = self.domain_discriminator(trg)
             d_trg = self.domain_discriminator(trg, param=self.trg_param)
 
             # d_src_out = self.domain_discriminator(src_out.detach())
@@ -127,10 +127,15 @@ class Networks_rev(nn.Module):
             raise ValueError("Need to specify domain classifier input")
         
         if self.dc_mode in ['mse', 'bce']:
-            trg_class = self.get_tensor(d_trg, 1, loss=self.dc_mode)
+            # dim = d_input.size()[0]
+            # d_src = d_input[:int(dim/2),...]
+            # d_trg = d_input[int(dim/2):,...]
             src_class = self.get_tensor(d_src, 0, loss=self.dc_mode)
+            trg_class = self.get_tensor(d_trg, 1, loss=self.dc_mode)
+            # input_class = torch.cat((src_class, trg_class), 0)
             # loss = 0.2*(self.dc_criterion(d_trg, trg_class) + self.dc_criterion(d_ntrg, trg_class) + self.dc_criterion(d_src, src_class) + self.dc_criterion(d_src_out, src_class) + self.dc_criterion(d_src_ref, src_class))
             loss = 0.5*(self.dc_criterion(d_trg, trg_class) + self.dc_criterion(d_src, src_class))
+            # loss = self.dc_criterion(d_input, input_class)
         elif self.dc_mode == 'ce':
             src_class = self.get_tensor(d_src, 0, loss=self.dc_mode)
             trg_class = self.get_tensor(d_trg, 1, loss=self.dc_mode)
@@ -179,7 +184,7 @@ class Networks_rev(nn.Module):
             p_src_loss = self.sl_weight*self.vgg_weight*self.p_loss(self.src_out, src_lbl)
         else:
             if self.dc_input=='img' or self.dc_input=='origin':
-                saliency_mask = self.get_saliency_map(self.domain_discriminator, src, loss=self.dc_mode, cls_idx=1)
+                saliency_mask = self.get_saliency_map(self.domain_discriminator, src, loss=self.dc_mode, cls_idx=1, norm_param=self.src_param)
                 src_loss = self.sl_weight*self.l_criterion(saliency_mask*self.src_out, saliency_mask*src_lbl)
                 p_src_loss = self.sl_weight*self.vgg_weight*self.p_loss(saliency_mask*self.src_out, saliency_mask*src_lbl)
             elif self.dc_input=='feature':
@@ -187,8 +192,8 @@ class Networks_rev(nn.Module):
                 src_loss = self.sl_weight*self.l_criterion(saliency_mask*self.src_out_feature, saliency_mask*self.src_lbl_feature)
                 p_src_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
         if not trg_noise == None:
-            self.n_trg_out, _ = self.denoiser(trg_noise)
-            # self.n_trg_out, _ = self.denoiser(trg_noise, param=self.trg_param)
+            # self.n_trg_out, _ = self.denoiser(trg_noise)
+            self.n_trg_out, _ = self.denoiser(trg_noise, param=self.trg_param)
             ntrg_loss = self.tl_weight*self.l_criterion(self.n_trg_out, trg)
             p_ntrg_loss = self.tl_weight*self.vgg_weight*self.p_loss(self.n_trg_out, trg)
         else : 
@@ -301,11 +306,11 @@ class Networks_rev(nn.Module):
                 for param in net.parameters():
                     param.requires_grad = requires_grad
 
-    def get_saliency_map(self, net, img, loss='mse', cls_idx=0):
+    def get_saliency_map(self, net, img, loss='mse', cls_idx=0, norm_param=None):
         img.requires_grad_()
         for param in net.parameters():
             param.requires_grad=True
-        output = net(img)
+        output = net(img, param=norm_param)
         if loss == 'mse':
             mse=torch.nn.MSELoss()
             target_tensor = cls_idx*torch.ones(output.size()).to(self.opt.device) #maximize the loss
@@ -322,6 +327,8 @@ class Networks_rev(nn.Module):
         reverse_saliency = 1/saliency
         max_s = torch.max(reverse_saliency)
         rev_norm_saliency = reverse_saliency/max_s
+
+        # rev_norm_saliency = torch.exp(-saliency)
 
         rev_norm_saliency.requires_grad_(False)
         for param in net.parameters():

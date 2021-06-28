@@ -67,8 +67,14 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         for param_group in optimizer_dc.param_groups:
             print("optim D lr : ", param_group['lr'])
 
-        net.denoiser.train()
-        net.domain_discriminator.train()
+        if opt.pretrained: 
+            #2nd
+            net.denoiser.train()
+            net.domain_discriminator.eval()
+        else :
+            #1st
+            net.denoiser.train()
+            net.domain_discriminator.train()
 
         print("***Training***")
         for batch in zip(src_t_loader, trg_t_loader):

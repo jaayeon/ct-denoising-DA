@@ -11,9 +11,9 @@ def make_tensor(img):
     tensor = tensor.reshape([1,1,h,w])
     return tensor
 
-def get_saliency_map(net, img, idx=0):
-    _, _, h,w = img.size()
-    imgs = make_tensor_arr_patches(img,80,15)
+def get_saliency_map(net, imgs, idx=0):
+    _, _, h,w = imgs.size()
+    # imgs = make_tensor_arr_patches(img,80,15)
     imgs.requires_grad_()
     output = net(imgs)
     mse = torch.nn.MSELoss()
@@ -22,9 +22,11 @@ def get_saliency_map(net, img, idx=0):
     # out_idx = output.argmax()
     # output_max=output[0, output_idx]
     # output_max.backward()
-    saliency_tensors = imgs.grad.data.abs()
-    saliency_tensor = recon_tensor_arr_patches(saliency_tensors, w, h, 80, 15)
-    saliency = saliency_tensor[0,0,:,:].numpy()
+
+    # saliency_tensors = imgs.grad.data.abs()
+    saliency_tensors = imgs.grad.data
+    # saliency_tensor = recon_tensor_arr_patches(saliency_tensors, w, h, 80, 15)
+    saliency = saliency_tensors[0,0,:,:].numpy()
     return saliency
 
 
@@ -79,12 +81,12 @@ def make_tensor_arr_patches(tensor_img, patch_size, patch_offset):
 opt = args
 
 # checkpoint_path = '../../data/denoising/checkpoint_DA/ge-20210506-0609-rev-edsr-chest-pelvis/edsr_epoch_0171_psnr_35.40038188.pth'
-checkpoint_path = '../../data/denoising/checkpoint_DA/ge-20210528-2317-rev-edsr-p-chest-pelvis/edsr_epoch_0190_psnr_35.20759986.pth'
+checkpoint_path = '../../data/denoising/checkpoint_DA/ge-20210622-2033-rev-edsr-chest-pelvis/edsr_epoch_0182_psnr_35.36941372.pth' 
 src_img = imageio.imread('../../data/denoising/train/phantom/ge/chest/level5_005_crop/ge_chest_level5_005_192.tiff')
 trg_img = imageio.imread('../../data/denoising/test/mayo/quarter_1mm/L067/quarter_1mm-L067-099.tiff')
 
-src_write = './tests/ge_chest_level5_005_192_map.tiff'
-trg_write = './tests/quarter_1mm-L067-099_map.tiff'
+src_write = './tests/ge_chest_level5_005_192_map_batch400_Xabs.tiff'
+trg_write = './tests/quarter_1mm-L067-099_map_batch400_Xabs.tiff'
 
 model = networks_rev.Networks_rev(opt)
 

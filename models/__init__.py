@@ -65,9 +65,10 @@ class NLayerDiscriminator(nn.Module):
         self.norm = norm
         self.sub_mean = common.MeanShift(pixel_range=1, n_channels=1)
         if type(norm_layer)==functools.partial: #no need to use bias as BatchNorm2d has affine parameters
-            use_bias = norm_layer.func==nn.InstanceNorm2d
+            use_bias = norm_layer.func!=nn.BatchNorm2d
         else :
-            use_bias = norm_layer==nn.InstanceNorm2d
+            use_bias = norm_layer!=nn.BatchNorm2d
+        # use_bias=True
         kw=4 #kernel size
         padw=1 #padding
         sequence=[nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw), nn.LeakyReLU(0.2, True)]
