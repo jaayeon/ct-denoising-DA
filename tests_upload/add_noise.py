@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument('--b_dcs', type=float, nargs='+', default=[10, 3, 3]
                         , help='bilateral filter parameters.The diameter of each pixel neighborhood, Filter sigma in color space, Filter sigma in the coordinate space')
     parser.add_argument('--nlm', type=float, default=0.8, help='0.8*5=4 is recording the best psnr')
-    parser.add_argument('--scale', type=float, default=1, help='scaling noise for gaussian, poisson')
+    parser.add_argument('--scale', type=float, default=1.5, help='scaling noise for gaussian, poisson')
     parser.add_argument('--num', type=int, default=20)
     opt = parser.parse_args()
 
@@ -64,18 +64,34 @@ if __name__ == "__main__":
             noise_mean = np.mean(noise)
             nstd_avg += noise_std
 
-            if noise_mode == 'poisson':
+            # if noise_mode == 'poisson':
+            #     imgname = '{}_{}_{}_{}'.format(noise_mode, params[p], opt.scale, basename)
+            #     # Generating noise for each unique value in image.
+            #     # vals = len(np.unique(qimg))
+            #     # vals = 2**np.ceil(np.log2(vals))
+            #     # nimg = np.random.poisson(qimg*vals)/float(vals)
+            #     nimg = np.random.poisson(qimg*opt.p_lam[p]*opt.scale)/float(opt.p_lam[p]*opt.scale)
+            #     # nimg = qimg + opt.scale*(nimg-qimg)
+            #     noise = nimg-qimg
+            #     artf_noise_std = np.std(noise)
+            #     rate += artf_noise_std/noise_std
+            if noise_mode =='poisson':
                 imgname = '{}_{}_{}_{}'.format(noise_mode, params[p], opt.scale, basename)
-                # Generating noise for each unique value in image.
-                # vals = len(np.unique(qimg))
-                # vals = 2**np.ceil(np.log2(vals))
-                # nimg = np.random.poisson(qimg*vals)/float(vals)
-                nimg = np.random.poisson(qimg*opt.p_lam[p]*opt.scale)/float(opt.p_lam[p]*opt.scale)
-                # nimg = qimg + opt.scale*(nimg-qimg)
-                noise = nimg-qimg
-                artf_noise_std = np.std(noise)
-                rate += artf_noise_std/noise_std
-
+                if opt.scale == 0.5:
+                    p_scale=4
+                elif opt.scale == 1:
+                    p_scale=1
+                elif opt.scale == 1.5:
+                    p_scale=0.5
+                elif opt.scale == 2:
+                    p_scale=0.28
+                elif opt.scale == 2.5:
+                    p_scale=0.18
+                elif opt.scale == 3:
+                    p_scale=0.12
+                else:
+                    raise NotImplementedError('--ratio_std must be one of the [0.5, 1, 1.5, 2, 2.5, 3]')
+                nimg = np.random.poisson(opt.p_lam[p]*p_scale*qimg)/float(opt.p_lam[p]*p_scale)
             elif noise_mode == 'gaussian':
                 imgname = '{}_{}_{}'.format(noise_mode, params[p], basename)
                 noise = np.random.normal(loc=0, scale=opt.g_std[p], size=qimg.shape).astype(float)
@@ -121,5 +137,5 @@ if __name__ == "__main__":
         qn_avg = qn_avg/opt.num
         nstd_avg = nstd_avg/opt.num
         print('[*Average*] qf_avg : {:.4f}, qn_avg : {:.4f}, nf_avg : {:.4f}\n'.format(qf_avg, qn_avg, nf_avg))
-        print('real_std : {}\nartf_std / real_std : {}'.format(nstd_avg, rate/opt.num))
+        # print('real_std : {}\nartf_std / real_std : {}'.format(nstd_avg, rate/opt.num))
 

@@ -26,11 +26,11 @@ if __name__ == "__main__":
     if not os.path.exists(n_mayo_1q):
         os.mkdir(n_mayo_1q)
 
-    # mayo_1_3 = [mayo_1q, mayo_3q]
-    # n_mayo_1_3 = [n_mayo_1q, n_mayo_3q]
+    mayo_1_3 = [mayo_1q, mayo_3q]
+    n_mayo_1_3 = [n_mayo_1q, n_mayo_3q]
 
-    mayo_1_3 = [mayo_3q, mayo_3q]
-    n_mayo_1_3 = [n_mayo_3q, n_mayo_3q]
+    # mayo_1_3 = [mayo_3q, mayo_3q]
+    # n_mayo_1_3 = [n_mayo_3q, n_mayo_3q]
 
     #1mm, 3mm
     for idx, mayo in enumerate(mayo_1_3):
@@ -48,7 +48,8 @@ if __name__ == "__main__":
             img = imread(imgpath)
             for j in range(720):
                 arr = img[j,:,:]
-
+                #L096:(-0.828, 21.838)
+                #
                 max_val = np.max(arr)
                 min_val = np.min(arr)
                 arr_norm = (arr-min_val)/(max_val-min_val)
@@ -63,4 +64,4 @@ if __name__ == "__main__":
                     print('...{}/{} progressed'.format(j,720))
 
             print('[{}/{}] save {}'.format(i,len(mayo_1q),nimgpath))
-            exit()
+            # exit()

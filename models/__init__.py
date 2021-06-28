@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torchvision.models import vgg19
 import random
 from models.convs import common
+import functools
 
 def set_model(opt):
     if opt.way == 'base':
@@ -58,12 +59,62 @@ class FeatureExtractor(nn.Module):
             x[:,i:i+1,:,:] = (x[:,i:i+1,:,:] - m)/s
         return x
 
+class NLayerDiscriminator(nn.Module):
+    def __init__(self, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, norm=False, use_sigmoid=False):
+        super(NLayerDiscriminator, self).__init__()
+        self.norm = norm
+        self.sub_mean = common.MeanShift(pixel_range=1, n_channels=1)
+        if type(norm_layer)==functools.partial: #no need to use bias as BatchNorm2d has affine parameters
+            use_bias = norm_layer.func!=nn.BatchNorm2d
+        else :
+            use_bias = norm_layer!=nn.BatchNorm2d
+        # use_bias=True
+        kw=4 #kernel size
+        padw=1 #padding
+        sequence=[nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw), nn.LeakyReLU(0.2, True)]
+        nf_mult=1
+        nf_mult_prev=1
+        for n in range(1,n_layers):
+            nf_mult_prev = nf_mult
+            nf_mult = min(2**n, 8)
+            sequence += [
+                nn.Conv2d(ndf*nf_mult_prev, ndf*nf_mult, kernel_size=kw, stride=2, padding=padw, bias=use_bias),
+                norm_layer(ndf*nf_mult),
+                nn.LeakyReLU(0.2, True)
+            ]
+        
+        nf_mult_prev=nf_mult
+        nf_mult=min(2**n_layers, 8)
+        sequence += [
+            nn.Conv2d(ndf*nf_mult_prev, ndf*nf_mult, kernel_size=kw, stride=1, padding=padw, bias=use_bias),
+            norm_layer(ndf*nf_mult),
+            nn.LeakyReLU(0.2, True)
+        ]
+        
+        sequence += [nn.Conv2d(ndf*nf_mult, 1, kernel_size=kw, stride=1, padding=padw)]
+
+        if use_sigmoid:
+            sequence += [nn.Sigmoid()]
+        self.model = nn.Sequential(*sequence)
+
+    def forward(self, input, param=[0.5,1]):
+        if input.size()[1] == 1 and self.norm: #if x is image, not feature --> normalize to (m=0.5,std=1)
+            input = self.sub_mean(input, mean=param[0], std=param[1])
+        else : 
+            pass
+        return self.model(input)
 
 class Discriminator(nn.Module):
-    def __init__(self, input_size, input_channels, class_num=1, norm=False):
+    def __init__(self, input_size, input_channels, class_num=1, norm_layer=nn.BatchNorm2d, norm=False):
         super(Discriminator, self).__init__()
         self.input_size = input_size
         self.norm = norm
+
+        if type(norm_layer)==functools.partial: #no need to use bias as BatchNorm2d has affine parameters
+            use_bias = norm_layer.func==nn.InstanceNorm2d
+        else :
+            use_bias = norm_layer==nn.InstanceNorm2d
+
         self.sub_mean = common.MeanShift(pixel_range=1, n_channels=1)
         def conv_output_size(input_size, kernel_size_list, stride_list):
             n=input_size
@@ -72,9 +123,10 @@ class Discriminator(nn.Module):
                 n = (n - k + 2*1) // s + 1
             return n
 
-        def add_block(layers, ch_in, ch_out, stride):
+        def add_block(layers, ch_in, ch_out, stride, use_bias, norm_layer=nn.BatchNorm2d):
             # layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 0))
-            layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 1))
+            layers.append(nn.Conv2d(ch_in, ch_out, 3, stride, 1, bias=use_bias))
+            layers.append(norm_layer(ch_out))
             layers.append(nn.LeakyReLU())
             return layers
 
@@ -82,7 +134,7 @@ class Discriminator(nn.Module):
         # ch_stride_set = [(input_channels,64,1),(64,64,2),(64,128,1),(128,128,2),(128,256,1),(256,256,2)]
         ch_stride_set = [(input_channels,64,1),(64,128,2),(128,256,1)]
         for ch_in, ch_out, stride in ch_stride_set:
-            add_block(layers, ch_in, ch_out, stride)
+            add_block(layers, ch_in, ch_out, stride, use_bias, norm_layer=norm_layer)
 
         # self.output_size = conv_output_size(input_size, [3]*6, [1,2]*3)
         self.output_size = conv_output_size(input_size, [3]*3, [1,2,1])
@@ -91,9 +143,9 @@ class Discriminator(nn.Module):
         self.fc2 = nn.Linear(1024, class_num)
         self.lrelu = nn.LeakyReLU()
 
-    def forward(self, x):
+    def forward(self, x, param=[0.5,1]):
         if x.size()[1] == 1 and self.norm: #if x is image, not feature --> normalize to (m=0.5,std=1)
-            x = self.sub_mean(x)
+            x = self.sub_mean(x, mean=param[0], std=param[1])
         else : 
             pass
         x = self.random_crop(x)

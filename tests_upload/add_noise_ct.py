@@ -21,13 +21,13 @@ if __name__ == "__main__":
     mayo_3q = '../../data/denoising/{}/mayo/quarter_3mm'.format(opt.dataset)
     mayo_1q = '../../data/denoising/{}/mayo/quarter_1mm'.format(opt.dataset)
 
-    # bp_mayo_1_3 = [bp_mayo_1q, bp_mayo_3q]
-    # n_bp_mayo_1_3 = [n_bp_mayo_1q, n_bp_mayo_3q]
-    # mayo_1_3 = [mayo_1q, mayo_3q]
+    bp_mayo_1_3 = [bp_mayo_1q, bp_mayo_3q]
+    n_bp_mayo_1_3 = [n_bp_mayo_1q, n_bp_mayo_3q]
+    mayo_1_3 = [mayo_1q, mayo_3q]
 
-    bp_mayo_1_3 = [bp_mayo_3q]
-    n_bp_mayo_1_3 = [n_bp_mayo_3q]
-    mayo_1_3 = [mayo_3q]
+    # bp_mayo_1_3 = [bp_mayo_3q]
+    # n_bp_mayo_1_3 = [n_bp_mayo_3q]
+    # mayo_1_3 = [mayo_3q]
 
     for idx, mayo in enumerate(bp_mayo_1_3):
         n_bp_mayo = n_bp_mayo_1_3[idx]
@@ -57,9 +57,11 @@ if __name__ == "__main__":
                 arr = img[j,:,:]
                 n_arr = nimg[j,:,:]
 
-                arr_norm = (arr-np.min(arr))/(np.max(arr)-np.min(arr))
-                n_arr_norm = (n_arr-np.min(arr))/(np.max(arr)-np.min(arr)) #min, max which are based on n_arr make distribution scale differences btw arr,n_arr
-
+                #calculate linear parameters
+                qm, qstd = np.mean(qimg), np.std(qimg)
+                am, astd = np.mean(arr), np.std(arr)
+                arr_norm = qstd*(arr-am)/astd+qm 
+                n_arr_norm = qstd*(n_arr-am)/astd+qm
                 noise = n_arr_norm-arr_norm
 
                 #add noise
