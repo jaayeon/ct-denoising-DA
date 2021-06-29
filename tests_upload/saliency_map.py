@@ -81,12 +81,12 @@ def make_tensor_arr_patches(tensor_img, patch_size, patch_offset):
 opt = args
 
 # checkpoint_path = '../../data/denoising/checkpoint_DA/ge-20210506-0609-rev-edsr-chest-pelvis/edsr_epoch_0171_psnr_35.40038188.pth'
-checkpoint_path = '../../data/denoising/checkpoint_DA/ge-20210622-2033-rev-edsr-chest-pelvis/edsr_epoch_0182_psnr_35.36941372.pth' 
+checkpoint_path = '../../data/denoising/checkpoint_DA/ge-20210627-2244-rev-edsr-chest-pelvis/edsr_epoch_0268_psnr_35.32406171.pth' 
 src_img = imageio.imread('../../data/denoising/train/phantom/ge/chest/level5_005_crop/ge_chest_level5_005_192.tiff')
 trg_img = imageio.imread('../../data/denoising/test/mayo/quarter_1mm/L067/quarter_1mm-L067-099.tiff')
 
-src_write = './tests/ge_chest_level5_005_192_map_batch400_Xabs.tiff'
-trg_write = './tests/quarter_1mm-L067-099_map_batch400_Xabs.tiff'
+src_write = './tests/ge_chest_level5_005_192_map_inputNorm.tiff'
+trg_write = './tests/quarter_1mm-L067-099_map_inputNorm.tiff'
 
 model = networks_rev.Networks_rev(opt)
 

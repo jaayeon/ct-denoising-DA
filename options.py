@@ -13,6 +13,7 @@ parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
 parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'fine_tuning'])
 parser.add_argument('--model', type=str, default='edsr', choices=['dncnn', 'unet', 'edsr'])
+parser.add_argument('--model_d', type=str, default='conv', choices=['fc', 'conv'], help='choose discriminator model')
 parser.add_argument('--way', type=str, default='rev', choices=['base', 'rev', 'wgan', 'wganrev'])
 parser.add_argument('--no_rev', dest='rev', action='store_false', help='no domain adversarial loss for denoiser')
 parser.set_defaults(rev=True)

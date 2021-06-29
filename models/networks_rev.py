@@ -56,8 +56,12 @@ class Networks_rev(nn.Module):
             pass
         
         norm_layer = self.get_norm_layer(norm_type=opt.norm)
-        # self.domain_discriminator = Discriminator(input_size, self.dc_channel, class_num=class_num, norm_layer=norm_layer, norm=opt.input_norm)
-        self.domain_discriminator = NLayerDiscriminator(self.dc_channel, norm_layer=norm_layer, norm=opt.input_norm)
+        if opt.model_d=='fc':
+            self.domain_discriminator = Discriminator(input_size, self.dc_channel, class_num=class_num, norm_layer=norm_layer, norm=opt.input_norm)
+        elif opt.model_d=='conv':
+            self.domain_discriminator = NLayerDiscriminator(self.dc_channel, norm_layer=norm_layer, norm=opt.input_norm)
+        else:
+            raise NotImplementedError('model_d should be one of [fc, conv] options')
         self.feature_extractor = FeatureExtractor()
 
         self.vgg_weight = opt.vgg_weight #perceptual loss weight
@@ -89,10 +93,10 @@ class Networks_rev(nn.Module):
             d_trg = self.domain_discriminator(trg_out.detach())
             gp_loss = self.gp(src_out.detach(), trg_out.detach()) if self.dc_mode=='wss' else 0
         elif self.dc_input == 'origin':
-            # input = torch.cat((src, trg), 0)
-            # d_input = self.domain_discriminator(input)
-            d_src = self.domain_discriminator(src, param=self.src_param)
-            d_trg = self.domain_discriminator(trg, param=self.trg_param)
+            input = torch.cat((src, trg), 0)
+            d_input = self.domain_discriminator(input)
+            # d_src = self.domain_discriminator(src, param=self.src_param)
+            # d_trg = self.domain_discriminator(trg, param=self.trg_param)
 
             # d_src_out = self.domain_discriminator(src_out.detach())
             # d_src_ref = self.domain_discriminator(src_lbl)
@@ -127,9 +131,9 @@ class Networks_rev(nn.Module):
             raise ValueError("Need to specify domain classifier input")
         
         if self.dc_mode in ['mse', 'bce']:
-            # dim = d_input.size()[0]
-            # d_src = d_input[:int(dim/2),...]
-            # d_trg = d_input[int(dim/2):,...]
+            dim = d_input.size()[0]
+            d_src = d_input[:int(dim/2),...]
+            d_trg = d_input[int(dim/2):,...]
             src_class = self.get_tensor(d_src, 0, loss=self.dc_mode)
             trg_class = self.get_tensor(d_trg, 1, loss=self.dc_mode)
             # input_class = torch.cat((src_class, trg_class), 0)
