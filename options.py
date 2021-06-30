@@ -89,8 +89,8 @@ parser.add_argument('--p_lam', type=float, nargs='+', default=[400,1400], help='
 parser.add_argument('--g_std', type=float, nargs='+', default=[0.032,0.016], help='gaussian parameter, default 0.032, 0.016 for 1,3mm')
 parser.add_argument('--b_dcs', type=float, nargs='+', default=[10, 0.01, 1],
                     help='bilateral filter parameters.The diameter of each pixel neighborhood, Filter sigma in color space, Filter sigma in the coordinate space')
-parser.add_argument('--scale_max', type=float, default=2.0, help='scaling noise in [scale_min, scale_max]')
-parser.add_argument('--scale_min', type=float, default=0.5, help='scaling noise in [scale_min, scale_max]')
+parser.add_argument('--scale_max', type=float, default=1.5, help='scaling noise in [scale_min, scale_max]')
+parser.add_argument('--scale_min', type=float, default=1.5, help='scaling noise in [scale_min, scale_max]')
 parser.add_argument('--ratio_std', type=float, default=3.0, help='noise std/real std')
 
 # Mayo dataset specifications

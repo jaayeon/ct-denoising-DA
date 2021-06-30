@@ -183,6 +183,28 @@ class Networks_rev(nn.Module):
         # _, self.src_out_feature = self.denoiser(self.src_out, param=self.src_param)
         # _, self.src_lbl_feature = self.denoiser(src_lbl, param=self.src_param)
 
+        if not trg_noise==None:
+            batch_size = src.size()[0]
+            input = torch.cat((src, trg_noise),0)
+            out, _ = self.denoiser(input)
+            self.src_out = out[:batch_size,...]
+            self.n_trg_out = out[batch_size:,...]
+
+            ntrg_loss = self.tl_weight*self.l_criterion(self.n_trg_out, trg)
+        else:
+            self.src_out, _ = self.denoiser(src)
+            ntrg_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
+
+        if saliency:
+            saliency_mask = self.get_saliency_map(self.domain_discriminator, src, loss=self.dc_mode, cls_idx=1, norm_param=self.src_param)
+            src_loss = self.sl_weight*self.l_criterion(saliency_mask*self.src_out, saliency_mask*src_lbl)
+        else :
+            src_loss = self.sl_weight*self.l_criterion(self.src_out, src_lbl)
+
+        p_src_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
+        p_ntrg_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
+
+        '''
         if not saliency:
             src_loss = self.sl_weight*self.l_criterion(self.src_out, src_lbl)
             p_src_loss = self.sl_weight*self.vgg_weight*self.p_loss(self.src_out, src_lbl)
@@ -203,6 +225,7 @@ class Networks_rev(nn.Module):
         else : 
             ntrg_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
             p_ntrg_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
+        '''
         l_loss = src_loss + ntrg_loss
         #perceptual loss
         p_loss = p_src_loss + p_ntrg_loss
@@ -327,7 +350,7 @@ class Networks_rev(nn.Module):
         saliency = img.grad.data.abs()
 
         #reverse--> get pixel which is not important in domain decision making
-        saliency[saliency<1e-8]=1e-8
+        saliency[saliency<1e-3]=1e-3
         reverse_saliency = 1/saliency
         max_s = torch.max(reverse_saliency)
         rev_norm_saliency = reverse_saliency/max_s
