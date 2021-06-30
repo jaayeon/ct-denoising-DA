@@ -350,7 +350,7 @@ class Networks_rev(nn.Module):
         saliency = img.grad.data.abs()
 
         #reverse--> get pixel which is not important in domain decision making
-        saliency[saliency<1e-3]=1e-3
+        saliency[saliency<1e-8]=1e-8
         reverse_saliency = 1/saliency
         max_s = torch.max(reverse_saliency)
         rev_norm_saliency = reverse_saliency/max_s
