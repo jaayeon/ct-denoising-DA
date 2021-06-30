@@ -176,8 +176,9 @@ class Networks_rev(nn.Module):
         else : 
             raise NotImplementedError('if dc_input is feature and you are using other networks, not edsr, you have to specify network modules of required gradient')
 
-        self.src_out, self.src_feature = self.denoiser(src, param=self.src_param)
+        # self.src_out, self.src_feature = self.denoiser(src, param=self.src_param)
         self.trg_out, self.trg_feature = self.denoiser(trg, param=self.trg_param)
+
         # self.src_out, self.src_feature = self.denoiser(src)
         # self.trg_out, self.trg_feature = self.denoiser(trg)
         # _, self.src_out_feature = self.denoiser(self.src_out, param=self.src_param)
@@ -193,6 +194,7 @@ class Networks_rev(nn.Module):
             ntrg_loss = self.tl_weight*self.l_criterion(self.n_trg_out, trg)
         else:
             self.src_out, _ = self.denoiser(src)
+
             ntrg_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
 
         if saliency:
