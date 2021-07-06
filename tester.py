@@ -30,6 +30,7 @@ def run_test(opt, img_list, gt_img_list):
         raise NotImplementedError()
 
     opt = set_gpu(opt)
+    net.eval()
 
     if opt.use_cuda:
         net = net.to(opt.device)

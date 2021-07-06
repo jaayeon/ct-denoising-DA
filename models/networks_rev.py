@@ -69,6 +69,8 @@ class Networks_rev(nn.Module):
         self.tl_weight = opt.tl_weight #l1 pixelwise loss weight in trg img
         self.rev_weight = opt.rev_weight #reversal gradient loss weight
 
+        self.sl_weight_iter = 0
+
     def dc_loss(self, src, src_lbl, trg, ntrg=None):
         self.set_requires_grad(self.denoiser, requires_grad=False)
         self.set_requires_grad(self.domain_discriminator, requires_grad=True)
@@ -179,6 +181,7 @@ class Networks_rev(nn.Module):
         # self.src_out, self.src_feature = self.denoiser(src, param=self.src_param)
         self.trg_out, self.trg_feature = self.denoiser(trg, param=self.trg_param)
 
+        self.sl_weight_scheduler(gamma=0.1, max_iter=10, step=10000)
         # self.src_out, self.src_feature = self.denoiser(src)
         # self.trg_out, self.trg_feature = self.denoiser(trg)
         # _, self.src_out_feature = self.denoiser(self.src_out, param=self.src_param)
@@ -382,3 +385,12 @@ class Networks_rev(nn.Module):
         else:
             raise NotImplementedError('normalization layer [%s] is not found' % norm_type)
         return norm_layer
+
+    def sl_weight_scheduler(self, gamma=0.1, max_iter=10, step=10000, type='exp'):
+        if self.sl_weight_iter == max_iter:
+            self.sl_weight = 0
+            return
+        else :
+            self.sl_weight_iter += 1
+        if type=='exp':
+            self.sl_weight = self.sl_weight*gamma

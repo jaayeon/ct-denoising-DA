@@ -19,7 +19,7 @@ class Networks(nn.Module):
         self.l_criterion = nn.L1Loss() #l1 pixelwise loss
 
         self.vgg_weight = opt.vgg_weight #perceptual loss weight
-        self.l_weight = opt.l_weight #l1 pixelwise loss weight
+        self.l_weight = opt.sl_weight #l1 pixelwise loss weight
 
 
     def p_loss(self, x, y):
