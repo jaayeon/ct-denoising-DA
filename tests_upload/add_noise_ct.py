@@ -40,9 +40,9 @@ if __name__ == "__main__":
             nbasename = '_'.join(basename.split('_')[:-1])+'_nbp_'+str(p_val)+'.tif'
             nimgpath = os.path.join(n_bp_mayo,nbasename)
             
-            img = imread(imgpath)
+            img = imread(imgpath) #bp_mayo
             print(imgpath)
-            nimg = imread(nimgpath)
+            nimg = imread(nimgpath) #nbp_mayo
             print(nimgpath)
 
             start_num = int(img.shape[0]*opt.delete)
