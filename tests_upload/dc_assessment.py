@@ -183,7 +183,7 @@ if __name__ == "__main__":
 
     length = 100
 
-    for dir_path in [trg_style_src_1mm,trg_style_src_3mm]:
+    for dir_path in [src_mayo_supervised]:
         img_tensor_batch = make_img_tensor(dir_path, length)
         score = domain_classifier(img_tensor_batch, net_g, net_dc, domain)
         print('{} : {} --> score : {:3f}[{}/{}]'.format(dir_path, domain, float(score/length), score, length))
