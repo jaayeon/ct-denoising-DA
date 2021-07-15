@@ -133,11 +133,11 @@ parser.add_argument('--tl_weight', type=float, default=1,
                     help = 'l1 pixel wise loss of target domain in gloss')
 
 #rev
-parser.add_argument('--rev_weight', type=float, default=0.5,
+parser.add_argument('--rev_weight', type=float, default=1,
                     help='domain classifier reversal loss')
 parser.add_argument('--dc_mode', type=str, default='mse', choices=['mse', 'bce', 'wss', 'ce'], 
                     help='domain classifier loss mode')
-parser.add_argument('--dc_input', type=str, default='c_img', choices=['img', 'noise', 'feature', 'c_img', 'c_noise', 'c_feature', 'origin'],
+parser.add_argument('--dc_input', type=str, default='origin', choices=['img', 'noise', 'feature', 'c_img', 'c_noise', 'c_feature', 'origin'],
                     help = 'domain classifier input')
 parser.add_argument('--style_stage', type=int, default=4, choices=[1,2,3,4,5,6],
                     help='stage for feature which is extracted from generator to domain classifier input')
