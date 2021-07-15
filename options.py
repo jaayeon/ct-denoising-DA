@@ -42,7 +42,7 @@ parser.add_argument('--n_channels', type=int, default=1, choices=[1, 3],
 parser.add_argument("--train_ratio", type=float, default=0.95,
                     help="Ratio of train dataset (ex: train:validation = 0.95:0.05), Default: 0.95")                 
 
-parser.add_argument('--ext', type=str, default='sep', choices=['sep', 'img'],
+parser.add_argument('--ext', type=str, default='img', choices=['sep', 'img'],
                     help='File extensions')
 parser.add_argument('--in_mem', default=False, action='store_true',
                     help="Load whole data into memory, Default: False")
