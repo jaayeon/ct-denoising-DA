@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='substract noise in bp and add it to mayo')
     parser.add_argument('--dataset', type=str, default='train', choices=['train', 'test'])
-    parser.add_argument('--p_val', type=int, nargs='+', default=[100000,400000], help='each for 1,3 thickness')
+    parser.add_argument('--p_val', type=int, nargs='+', default=[45000,150000], help='each for 1,3 thickness')
     parser.add_argument('--delete', type=float, default=0.3, help='delete percentage for each end direction')
     opt = parser.parse_args()
     bp_mayo_3q = glob.glob('../../data/denoising/{}/mayo/back_projection/3mm/quarter_3mm_*_bp.tif'.format(opt.dataset))
@@ -70,7 +70,7 @@ if __name__ == "__main__":
                 noise_add[np.where(noise_add<0.0)] = 0.0
                 
 
-                save_path = os.path.join('../../data/denoising/{}/mayo/'.format(opt.dataset),'qquarter_'+name[-2])
+                save_path = os.path.join('../../data/denoising/{}/mayo/'.format(opt.dataset),'qquarter_{}_{}'.format(name[-2],p_val))
                 if not os.path.exists(save_path):
                     os.mkdir(save_path)
                 save_path = os.path.join(save_path,name[-1])
