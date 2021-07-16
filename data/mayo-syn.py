@@ -27,6 +27,13 @@ class MayoSyn(PatchData):
         names_hr = [path.replace('qquarter', 'quarter') for path in names_lr]
         return names_hr, names_lr #qquarter, quarter pair
 
+    def _scan_sp(self):
+        names_lr = sorted(
+            glob.glob(os.path.join(self.dir_lr, '**', '*' + self.ext[0]))
+        )
+        names_hr = [path.replace('qquarter', 'quarter') for path in names_lr]
+        return names_hr, names_lr #qquarter, quarter pair
+
     def __getitem__(self, idx):
         if not self.in_mem:
             lr, hr, filename = self._load_file(idx)
@@ -65,4 +72,3 @@ class MayoSyn(PatchData):
             qquarter_dose = 'qquarter_{}mm'.format(self.thickness)
             self.dir_hr = os.path.join(self.apath, quarter_dose)
             self.dir_lr = os.path.join(self.apath, qquarter_dose)
-    

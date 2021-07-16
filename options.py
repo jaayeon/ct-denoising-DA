@@ -42,7 +42,7 @@ parser.add_argument('--n_channels', type=int, default=1, choices=[1, 3],
 parser.add_argument("--train_ratio", type=float, default=0.95,
                     help="Ratio of train dataset (ex: train:validation = 0.95:0.05), Default: 0.95")                 
 
-parser.add_argument('--ext', type=str, default='sep', choices=['sep', 'img'],
+parser.add_argument('--ext', type=str, default='img', choices=['sep', 'img'],
                     help='File extensions')
 parser.add_argument('--in_mem', default=False, action='store_true',
                     help="Load whole data into memory, Default: False")
@@ -133,11 +133,11 @@ parser.add_argument('--tl_weight', type=float, default=1,
                     help = 'l1 pixel wise loss of target domain in gloss')
 
 #rev
-parser.add_argument('--rev_weight', type=float, default=0.5,
+parser.add_argument('--rev_weight', type=float, default=1,
                     help='domain classifier reversal loss')
 parser.add_argument('--dc_mode', type=str, default='mse', choices=['mse', 'bce', 'wss', 'ce'], 
                     help='domain classifier loss mode')
-parser.add_argument('--dc_input', type=str, default='c_img', choices=['img', 'noise', 'feature', 'c_img', 'c_noise', 'c_feature', 'origin'],
+parser.add_argument('--dc_input', type=str, default='origin', choices=['img', 'noise', 'feature', 'c_img', 'c_noise', 'c_feature', 'origin'],
                     help = 'domain classifier input')
 parser.add_argument('--style_stage', type=int, default=4, choices=[1,2,3,4,5,6],
                     help='stage for feature which is extracted from generator to domain classifier input')
