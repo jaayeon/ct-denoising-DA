@@ -25,6 +25,8 @@ if __name__ == "__main__":
     num = [0, 0]
     #1mm,3mm
     for p, mayo_q, mayo_f in zip([0,1], [mayo_1q, mayo_3q], [mayo_1f, mayo_3f]):
+    # for p, mayo_q, mayo_f in zip([0], [mayo_1q], [mayo_1f]):
+    # for p, mayo_q, mayo_f in zip([1], [mayo_3q], [mayo_3f]):
         imgs = len(mayo_q)
         idx = np.arange(0, len(mayo_q))
         random.shuffle(idx)
