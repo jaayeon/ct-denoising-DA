@@ -11,7 +11,7 @@ test_result_dir = os.path.join(data_dir, 'test_result_DA')
 
 parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation')
 
-parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'fine_tuning'])
+parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'dc_acc', 'fine_tuning'])
 parser.add_argument('--model', type=str, default='edsr', choices=['dncnn', 'unet', 'edsr'])
 parser.add_argument('--way', type=str, default='rev', choices=['base', 'rev', 'wgan', 'wganrev'])
 parser.add_argument('--no_rev', dest='rev', action='store_false', help='no domain adversarial loss for denoiser')

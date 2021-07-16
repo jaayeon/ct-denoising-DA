@@ -75,7 +75,7 @@ def load_config(opt):
 def load_model(opt, model, optimizer=None):
     if opt.mode=='train' or opt.mode=='fine_tuning':
         checkpoint_dir = select_checkpoint_dir(opt)
-    elif opt.mode == 'test':
+    elif opt.mode == 'test' or opt.mode == 'dc_acc':
         checkpoint_dir = opt.checkpoint_dir
         print("Use {} director as checkpoint".format(os.path.abspath(opt.checkpoint_dir)))
     elif opt.mode == 'result_sidd' or opt.mode == 'result':
@@ -127,6 +127,8 @@ def load_model(opt, model, optimizer=None):
             return model, checkpoint
         else : 
             return n_epoch+1, model, optimizer
+    elif opt.mode == 'dc_acc':
+        return model
     else : 
         if opt.way == 'wgan' or opt.way == 'wganrev':
             return n_epoch+1, model.generator, optimizer
