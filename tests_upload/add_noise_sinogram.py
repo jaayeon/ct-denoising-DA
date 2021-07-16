@@ -9,7 +9,7 @@ import argparse
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Add Poisson Noise in Sinogram')
-    parser.add_argument('--p_val', type=int, nargs='+', default=[150000,500000], help='each for 1, 3mm')
+    parser.add_argument('--p_val', type=int, nargs='+', default=[45000,150000], help='each for 1, 3mm')
     parser.add_argument('--dataset', type=str, default='train', choices=['train', 'test'])
     opt = parser.parse_args()
 

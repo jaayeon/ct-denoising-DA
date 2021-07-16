@@ -75,15 +75,6 @@ class Networks_rev(nn.Module):
         self.set_requires_grad(self.denoiser, requires_grad=False)
         self.set_requires_grad(self.domain_discriminator, requires_grad=True)
 
-        # if self.change_contents:
-        #     src_out, trg_out, idx_swap = self.content_randomization(self.src_out, self.trg_out, return_idx=True)
-        #     src_lbl, trg_out = self.content_randomization(src_lbl, self.trg_out, idx_swap=idx_swap)
-        #     src_feature, trg_feature = self.content_randomization(self.src_feature, self.trg_feature)
-        #     src, trg = self.content_randomization(src, trg, idx_swap=idx_swap)
-        # else : 
-        #     src_out, trg_out = self.src_out, self.trg_out
-        #     src_feature, trg_feature = self.src_feature, self.trg_feature
-
         if self.dc_input == 'img':
             d_src = self.domain_discriminator(src_out.detach())
             d_trg = self.domain_discriminator(trg_out.detach())
@@ -133,8 +124,28 @@ class Networks_rev(nn.Module):
         loss = self.p_criterion(fake_feature, real_feature)
         return loss
 
-    #new version 05.06
-    def g_loss(self, src, trg, src_lbl, trg_noise=None, rev=True, saliency=False, return_losses=True):
+    def g_loss_1st(self, src, src_lbl):
+        '''
+        step 1 : Supervised Learning with Denoiser L(D(src), src*) ... trg_noise=None, rev=False
+        step 2 : Supervised Learning with Denoiser L(D(src|n_trg), src*|trg), Domain Classifier Adversarial Loss for Denoiser with L(DC(trg'),0) ... trg_noise=arr, rev=True
+        one step : Supervised Learning with Denoiser L(D(src|n_trg), src*|trg), Domain Classifier Adversarial Loss for Denoiser with L(DC(trg'),0) ... trg_noise=arr, rev=True
+        '''
+        if self.dc_input == 'feature':
+            self.set_requires_grad([self.denoiser.head, self.denoiser.body1], requires_grad=True)
+            self.set_requires_grad([self.denoiser.body2, self.denoiser.tail, self.domain_discriminator], requires_grad=False)
+        else : 
+            self.set_requires_grad(self.denoiser, requires_grad=True)
+            self.set_requires_grad(self.domain_discriminator, requires_grad=False)
+
+        self.src_out, _ = self.denoiser(src)
+        l_loss = self.l_criterion(self.src_out, src_lbl)
+        p_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
+        domain_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
+        loss = l_loss+p_loss+domain_loss
+
+        return loss, l_loss, p_loss, domain_loss
+
+    def g_loss_2nd(self, src, trg, src_lbl, trg_noise=None, rev=True, saliency=False):
         '''
         step 1 : Supervised Learning with Denoiser L(D(src), src*) ... trg_noise=None, rev=False
         step 2 : Supervised Learning with Denoiser L(D(src|n_trg), src*|trg), Domain Classifier Adversarial Loss for Denoiser with L(DC(trg'),0) ... trg_noise=arr, rev=True
@@ -210,7 +221,8 @@ class Networks_rev(nn.Module):
         #weighted sum  
         loss = l_loss + p_loss + domain_loss
 
-        return (loss, l_loss, p_loss, domain_loss) if return_losses else loss
+
+        return loss, l_loss, p_loss, domain_loss
 
     def gp(self, y, fake, lambda_=10):
         y, fake = self.align_size(y, fake)

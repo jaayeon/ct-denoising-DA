@@ -95,7 +95,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
                 optimizer.zero_grad()
                 net.denoiser.zero_grad()
-                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=trg_noise, rev=opt.rev, saliency=opt.saliency, return_losses=True)
+                loss, l_loss, p_loss, rev_loss = net.g_loss_2nd(src_img, trg_img, src_lbl, trg_noise=trg_noise, rev=opt.rev, saliency=opt.saliency)
             else : 
                 #1st step 
                 for _ in range(opt.n_d_train):
@@ -105,17 +105,23 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
 
                 optimizer.zero_grad()
                 net.denoiser.zero_grad()
-                loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=None, rev=opt.rev, saliency=False, return_losses=True) #only src loss without saliency mask
+                loss, l_loss, p_loss, rev_loss = net.g_loss_1st(src_img, src_lbl) #only src loss without saliency mask
             loss.backward()
             optimizer.step()
 
             #calculate psnr
             src_out = net.src_out
-            trg_out = net.trg_out
             mse_loss = mse_criterion(src_out, src_lbl)
             spsnr = 10 * math.log10(1 / mse_loss.item())
             nmse_loss = mse_criterion(src_img, src_lbl)
             nspsnr = 10 * math.log10(1 / nmse_loss.item())
+            if opt.pretrained:
+                trg_out = net.trg_out
+            else : 
+                trg_out, _ = net.denoiser(trg_img)
+                # trg_out = 0
+                # tpsnr = 0
+                # ntpsnr = 0
             mse_loss = mse_criterion(trg_out, trg_lbl)
             tpsnr = 10 * math.log10(1 / mse_loss.item())
             nmse_loss = mse_criterion(trg_img, trg_lbl)
@@ -144,19 +150,25 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 if opt.pretrained:
                     #2nd step
                     dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=trg_noise)
-                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=trg_noise, rev=opt.rev, saliency=False, return_losses=True)
+                    loss, l_loss, p_loss, rev_loss = net.g_loss_2nd(src_img, trg_img, src_lbl, trg_noise=trg_noise, rev=opt.rev, saliency=False)
                 else: 
                     #1st step
                     dc_loss = net.dc_loss(src_img, src_lbl, trg_img, ntrg=None)
-                    loss, l_loss, p_loss, rev_loss = net.g_loss(src_img, trg_img, src_lbl, trg_noise=None, rev=opt.rev, saliency=False, return_losses=True)
+                    loss, l_loss, p_loss, rev_loss = net.g_loss_1st(src_img, src_lbl)
 
             #calculate psnr
             src_out = net.src_out
-            trg_out = net.trg_out
             mse_loss = mse_criterion(src_out, src_lbl)
             spsnr = 10 * math.log10(1 / mse_loss.item())
             nmse_loss = mse_criterion(src_img, src_lbl)
             nspsnr = 10 * math.log10(1 / nmse_loss.item())
+            if opt.pretrained:
+                trg_out = net.trg_out
+            else : 
+                trg_out, _ = net.denoiser(trg_img)
+                # trg_out = 0
+                # tpsnr = 0
+                # ntpsnr = 0
             mse_loss = mse_criterion(trg_out, trg_lbl)
             tpsnr = 10 * math.log10(1 / mse_loss.item())
             nmse_loss = mse_criterion(trg_img, trg_lbl)

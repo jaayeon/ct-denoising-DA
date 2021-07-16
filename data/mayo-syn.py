@@ -72,4 +72,3 @@ class MayoSyn(PatchData):
             qquarter_dose = 'qquarter_{}mm'.format(self.thickness)
             self.dir_hr = os.path.join(self.apath, quarter_dose)
             self.dir_lr = os.path.join(self.apath, qquarter_dose)
-    
