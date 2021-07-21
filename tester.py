@@ -27,7 +27,7 @@ def run_test(opt, img_list, gt_img_list):
     elif opt.target=='ge':
         param = [0.250, 0.327]
     else : 
-        raise NotImplementedError()
+        param = None
 
     opt = set_gpu(opt)
     net.eval()
