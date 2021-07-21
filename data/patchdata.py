@@ -247,22 +247,40 @@ class PatchData(data.Dataset):
         scale = random.randint(scale_min*2,scale_max*2)/2
         sigma_est = np.mean(estimate_sigma(img, multichannel=False))
         if noise=='p':
-            if scale == 0.5:
-                p_scale=4
-            elif scale == 1:
-                p_scale=1
-            elif scale == 1.5:
-                p_scale=0.5
-            elif scale == 2:
-                p_scale=0.28
-            elif scale == 2.5:
-                p_scale=0.18
-            elif scale == 3:
-                p_scale=0.12
-            else:
-                raise NotImplementedError('--ratio_std must be one of the [0.5, 1, 1.5, 2, 2.5, 3]')
-            params = self.opt.p_lam
-            nimg = np.random.poisson(params[pidx]*p_scale*img)/float(params[pidx]*p_scale)
+            if self.dataset=='mayo':
+                if scale == 0.5:
+                    p_scale=4
+                elif scale == 1:
+                    p_scale=1
+                elif scale == 1.5:
+                    p_scale=0.5
+                elif scale == 2:
+                    p_scale=0.28
+                elif scale == 2.5:
+                    p_scale=0.18
+                elif scale == 3:
+                    p_scale=0.12
+                else:
+                    raise NotImplementedError('--ratio_std must be one of the [0.5, 1, 1.5, 2, 2.5, 3]')
+                params = self.opt.p_lam
+                nimg = np.random.poisson(params[pidx]*p_scale*img)/float(params[pidx]*p_scale)
+
+            elif self.dataset =='piglet':
+                if scale == 0.5:
+                    p_lam = 2500
+                elif scale == 1:
+                    p_lam = 620
+                elif scale == 1.5:
+                    p_lam = 285
+                elif scale == 2:
+                    p_lam = 160
+                elif scale == 2.5:
+                    p_lam = 100
+                else:
+                    raise NotImplementedError('--ratio_std must be one of the [0.5, 1, 1.5, 2, 2.5, 3]')
+                nimg = np.random.poisson(p_lam*img)/float(p_lam)
+            else : 
+                raise NotImplementedError('you have to find p_lambda of {} dadtaset'.format(self.dataset))
         elif noise=='g':
             params = self.opt.g_std
             noise = np.random.normal(loc=0, scale=scale*params[pidx], size=img.shape).astype(float)
