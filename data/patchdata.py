@@ -92,8 +92,9 @@ class PatchData(data.Dataset):
             if n_images == 0:
                 self.repeat = 0
             else:
-                self.repeat = max(n_patches // n_images, 1)
-                # self.repeat = n_patches / n_images
+                # self.repeat = max(n_patches // n_images, 1)
+                self.repeat = max(n_patches / n_images, 1)
+                #rev mode에서 한 dataset에 1 repeat이 부족할 때, 그 데이터에 맞추어 len가 결정되기 때문에 에러가 난다면 test_every나 batch size를 키워야함
 
     # Below functions as used to prepare images
     def _scan(self):

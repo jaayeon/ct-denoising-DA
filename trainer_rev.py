@@ -120,9 +120,6 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_out = net.trg_out
             else : 
                 trg_out, _ = net.denoiser(trg_img)
-                # trg_out = 0
-                # tpsnr = 0
-                # ntpsnr = 0
             mse_loss = mse_criterion(trg_out, trg_lbl)
             tpsnr = 10 * math.log10(1 / mse_loss.item())
             nmse_loss = mse_criterion(trg_img, trg_lbl)
@@ -167,9 +164,6 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
                 trg_out = net.trg_out
             else : 
                 trg_out, _ = net.denoiser(trg_img)
-                # trg_out = 0
-                # tpsnr = 0
-                # ntpsnr = 0
             mse_loss = mse_criterion(trg_out, trg_lbl)
             tpsnr = 10 * math.log10(1 / mse_loss.item())
             nmse_loss = mse_criterion(trg_img, trg_lbl)

@@ -67,11 +67,13 @@ class Record():
         if mode == 'train':
             for i in range(self.key_length):
                 self.train[i] = self.train[i]/self.train_length
+                # self.train[i] = self.train[i]/self.train_iter
             print('[*] Training Epoch[{}/{}] : {}'.format(self.epoch, self.n_epochs,
                 ', '.join(['{}:{:.3f}'.format(self.keys[i], self.train[i]) for i in range(self.key_length)])))
         else : 
             for i in range(self.key_length):
                 self.valid[i] = self.valid[i]/self.valid_length
+                # self.valid[i] = self.valid[i]/self.valid_iter
             print('[*] Validation Epoch[{}/{}] : {}'.format(self.epoch, self.n_epochs,
                 ', '.join(['{}:{:.3f}'.format(self.keys[i], self.valid[i]) for i in range(self.key_length)])))
 
