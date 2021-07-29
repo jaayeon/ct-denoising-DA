@@ -23,6 +23,7 @@ class Record():
         self.train_iter = 0
         self.valid_iter = 0
         self.best_psnr = 0
+        self.best_loss = 99999999
 
         self.log_file = os.path.join(self.checkpoint_dir, opt.model + "_log.csv")
         self.opt_file = os.path.join(self.checkpoint_dir, "config.txt")
@@ -89,12 +90,28 @@ class Record():
 
     def save_checkpoint(self, model, optimizer, save_criterion=None):
         #it should precede write_log() 
-        try : current_psnr = self.valid[self.keys.index(save_criterion)]
+        try : current = self.valid[self.keys.index(save_criterion)]
         except : raise KeyError("'save criterion' should be one of keys")
 
-        if self.best_psnr < current_psnr :
-            self.best_psnr = current_psnr
-            checkpoint_path = os.path.join(self.checkpoint_dir, "{}_epoch_{:04d}_psnr_{:.8f}.pth" .format(self.model_name, self.epoch, current_psnr))
+        if 'psnr' in save_criterion:
+            criterion = 'psnr'
+            if self.best_psnr < current:
+                self.best_psnr = current
+                save = True
+            else : 
+                save = False
+        elif 'loss' in save_criterion:
+            criterion = 'loss'
+            if self.best_loss > current:
+                self.best_loss = current
+                save = True
+            else : 
+                save = False
+        else : 
+            raise KeyError('save_criterion should be one of loss or psnr')
+
+        if save:
+            checkpoint_path = os.path.join(self.checkpoint_dir, "{}_epoch_{:04d}_{}_{:.8f}.pth" .format(self.model_name, self.epoch, criterion, current))
             checkpoint_path = os.path.abspath(checkpoint_path)
             optimizers=[optimizer[i].state_dict() for i in range(len(optimizer))]
             if torch.cuda.device_count() > 1 and self.opt.multi_gpu:

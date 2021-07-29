@@ -14,6 +14,7 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
     opt= set_gpu(opt)
     print('Initialize networks for training')
     net = set_model(opt)
+    # net_dc = set_model(opt)
     print(net)
     
     print("Setting Optimizer")
@@ -31,9 +32,9 @@ def run_train(opt, src_t_loader, src_v_loader, trg_t_loader, trg_v_loader):
         opt.start_epoch, net, optimizers = load_model(opt, net, optimizer=[optimizer, optimizer_dc])
         optimizer, optimizer_dc = optimizers[0], optimizers[1]
     elif opt.pretrained : 
-        # net, _ = load_model(opt, net)
-        net_dc, _ = load_model(opt, net) 
-        net.domain_discriminator = net_dc.domain_discriminator
+        net, _ = load_model(opt, net)
+        # net_dc, _ = load_model(opt, net_dc) 
+        # net.domain_discriminator = net_dc.domain_discriminator
         set_checkpoint_dir(opt)
     else : 
         set_checkpoint_dir(opt)

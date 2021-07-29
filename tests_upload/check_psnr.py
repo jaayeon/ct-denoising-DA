@@ -24,7 +24,8 @@ def select_test_dir():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Calculate psnr/ssim between two images')
-    parser.add_argument('--thickness', type=str, default=None, choices=['3', '1']) # mayo dataset thickness option
+    parser.add_argument('--thickness', type=str, default='1', choices=['3', '1']) # mayo dataset thickness option
+    parser.add_argument('--use_cuda', default=True)
     # parser.add_argument()
     args = parser.parse_args()
 
@@ -69,6 +70,11 @@ if __name__ == "__main__":
         noisy_img_tensor = torch.from_numpy(noisy_img.reshape(1,1,noisy_img.shape[0], noisy_img.shape[1]))
         test_img_tensor = torch.from_numpy(test_img.reshape(1,1,test_img.shape[0], test_img.shape[1]))
         gt_img_tensor = torch.from_numpy(gt_img.reshape(1,1,gt_img.shape[0], gt_img.shape[1]))
+
+        if args.use_cuda:
+            noisy_img_tensor = noisy_img_tensor.to('cuda')
+            test_img_tensor = test_img_tensor.to('cuda')
+            gt_img_tensor = gt_img_tensor.to('cuda')
 
         noise_loss, noise_psnr, noise_ssim, batch_loss, batch_psnr, batch_ssim = calc_metrics(noisy_img_tensor, test_img_tensor, gt_img_tensor)
         

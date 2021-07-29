@@ -3,6 +3,7 @@ import numpy as np
 import imageio
 import glob, os
 import torch
+import argparse
 
 if __name__ == "__main__":
 
@@ -12,8 +13,8 @@ if __name__ == "__main__":
     new_min = -160.0
     new_max = 240.0
 
-    test_dirs = ['ge-20210719-2009-rev-edsr-p-chest-pelvis-testset-mayo-1mm',
-                'ge-20210719-2009-rev-edsr-p-chest-pelvis-testset-mayo-3mm']
+    test_dirs = ['ge-20210717-0511-rev-edsr-sp-chest-pelvis-testset-mayo-1mm',
+                'ge-20210717-0511-rev-edsr-sp-chest-pelvis-testset-mayo-3mm']
     # test_dirs = ['1mm_nlm_eunji',
     #             '3mm_nlm_eunji']
     test_path = '../../data/denoising/test_result_DA'

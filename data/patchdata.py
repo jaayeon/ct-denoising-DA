@@ -92,8 +92,8 @@ class PatchData(data.Dataset):
             if n_images == 0:
                 self.repeat = 0
             else:
-                # self.repeat = max(n_patches // n_images, 1)
-                self.repeat = n_patches / n_images
+                self.repeat = max(n_patches // n_images, 1)
+                # self.repeat = n_patches / n_images
 
     # Below functions as used to prepare images
     def _scan(self):

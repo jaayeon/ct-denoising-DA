@@ -180,17 +180,22 @@ class Networks_rev(nn.Module):
             ntrg_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
 
         if saliency:
-            saliency_mask = self.get_saliency_map(self.domain_discriminator, src, loss=self.dc_mode, cls_idx=1, norm_param=self.src_param)
+            saliency_mask = self.get_saliency_mask(self.domain_discriminator, src, loss=self.dc_mode, cls_idx=1, norm_param=self.src_param)
             src_loss = self.sl_weight*self.l_criterion(saliency_mask*self.src_out, saliency_mask*src_lbl)
         else :
             src_loss = self.sl_weight*self.l_criterion(self.src_out, src_lbl)
 
-        p_src_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
-        p_ntrg_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
-
         l_loss = src_loss + ntrg_loss
-        #perceptual loss
-        p_loss = p_src_loss + p_ntrg_loss
+
+        #perceptual loss..ntrg true일때만 돌아감
+        if self.vgg_weight >0:
+            p_src_loss = self.p_loss(self.src_out, src_lbl)
+            p_ntrg_loss = self.p_loss(self.n_trg_out, trg)
+            p_loss = self.vgg_weight*0.5*(p_src_loss + p_ntrg_loss)
+        else : 
+            p_src_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
+            p_ntrg_loss = torch.zeros(1, dtype=torch.float, device=self.opt.device)
+            p_loss = p_src_loss + p_ntrg_loss
         
         #domain classifier loss
         if rev and (self.dc_input == 'img' or self.dc_input == 'origin'):
@@ -288,7 +293,7 @@ class Networks_rev(nn.Module):
                 for param in net.parameters():
                     param.requires_grad = requires_grad
 
-    def get_saliency_map(self, net, img, loss='mse', cls_idx=0, norm_param=None):
+    def get_saliency_mask(self, net, img, loss='mse', cls_idx=0, norm_param=None):
         img.requires_grad_()
         for param in net.parameters():
             param.requires_grad=True
@@ -305,12 +310,12 @@ class Networks_rev(nn.Module):
         saliency = img.grad.data.abs()
 
         #reverse--> get pixel which is not important in domain decision making
-        saliency[saliency<1e-8]=1e-8
-        reverse_saliency = 1/saliency
-        max_s = torch.max(reverse_saliency)
-        rev_norm_saliency = reverse_saliency/max_s
+        # saliency[saliency<1e-8]=1e-8
+        # reverse_saliency = 1/saliency
+        # max_s = torch.max(reverse_saliency)
+        # rev_norm_saliency = reverse_saliency/max_s
 
-        # rev_norm_saliency = torch.exp(-saliency)
+        rev_norm_saliency = torch.exp(-saliency)
 
         rev_norm_saliency.requires_grad_(False)
         for param in net.parameters():
