@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(description='CT Denoising Domain Adaptation Ben
 
 parser.add_argument('--mode', type=str, default= 'train', choices=['train', 'test'])
 parser.add_argument('--model', type=str, default= 'unet', choices=['dncnn', 'unet', 'resnet'])
-parser.add_argument('--way', type=str, default= 'bilateral', choices=['n2v', 'n2s', 'n2c', 'n2sim', 'bilateral'])
+parser.add_argument('--way', type=str, default= 'n2s', choices=['n2v', 'n2s', 'n2c', 'n2n', 'bilateral'])
 
 parser.add_argument('--multi_gpu', default=False, action='store_true',
                     help='Use multiple GPUs')

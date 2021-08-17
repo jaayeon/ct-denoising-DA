@@ -6,8 +6,10 @@ import trainer_n2v as N2VT
 import trainer_n2c as N2CT
 import trainer_n2s as N2ST
 import trainer_n2sim as N2SimT
+import trainer_n2n as N2N
 import tester as TST
 import tester_lpmayo as TSTM
+import tester_n2n as TSTN
 import tester_bilateral as TBL
 
 from utils.saver import load_config
@@ -30,10 +32,10 @@ if __name__ == '__main__':
         elif opt.way == 'n2c':
             train_n2c_loader, valid_n2c_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
             N2CT.run_train(opt, train_n2c_loader, valid_n2c_loader)
-
-        elif opt.way == 'n2sim':
-            train_n2sim_loader, valid_n2sim_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
-            N2SimT.run_train(opt, train_n2sim_loader, valid_n2sim_loader)
+        
+        elif opt.way == 'n2n':
+            train_n2n_loader, valid_n2n_loader = get_train_valid_dataloader(opt, train_datasets=opt.source)
+            N2N.run_train(opt, train_n2n_loader, valid_n2n_loader)
 
         elif opt.way == 'bilateral':
             img_list, gt_img_list = get_test_img_list(opt)
@@ -45,9 +47,13 @@ if __name__ == '__main__':
         opt = load_config(opt)
         #print(opt)
         img_list, gt_img_list = get_test_img_list(opt)
+
+        #print(img_list)
     
         if opt.target == 'lp-mayo':
             TSTM.run_test(opt, img_list, gt_img_list)
+        elif opt.way == 'n2n':
+            TSTN.run_test(opt, img_list, gt_img_list)
         else :
             TST.run_test(opt, img_list, gt_img_list)
            

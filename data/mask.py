@@ -5,7 +5,7 @@ import torch
 class Masker():
     """Object for masking and demasking"""
 
-    def __init__(self, width=5, mode='zero', infer_single_pass=False, include_mask_as_input=False):
+    def __init__(self, width=4, mode='zero', infer_single_pass=False, include_mask_as_input=False):
         self.grid_size = width
         self.n_masks = width ** 2
 

@@ -14,7 +14,43 @@ class Mayo(PatchData):
         self.idx_num = 0
         super(Mayo, self).__init__(
             args, name=name, mode=mode, domain_sync=domain_sync, benchmark=benchmark)
-            
+
+    # for N2V
+
+    def generate_mask(self, input):
+        ratio = 0.85
+        size_window = (7,7)
+        size_data = (self.args.patch_size,self.args.patch_size)
+        num_sample = int(size_data[0] * size_data[1] * (1 - ratio)) 
+
+        mask = np.ones(size_data)
+        output = input
+
+        idy_msk = np.random.randint(0, size_data[0], num_sample)
+        idx_msk = np.random.randint(0, size_data[1], num_sample)    ##0 to 64 sample num 409
+
+        idy_neigh = np.random.randint(-size_window[0] // 2 + size_window[0] % 2, size_window[0] // 2 + size_window[0] % 2, num_sample) ##-32 to 32 num 409
+        idx_neigh = np.random.randint(-size_window[1] // 2 + size_window[1] % 2, size_window[1] // 2 + size_window[1] % 2, num_sample) ##-32 to 32 num 409
+
+        idy_msk_neigh = idy_msk + idy_neigh
+        idx_msk_neigh = idx_msk + idx_neigh
+
+        idy_msk_neigh = idy_msk_neigh + (idy_msk_neigh < 0) * size_data[0] - (idy_msk_neigh >= size_data[0]) * size_data[0]
+        idx_msk_neigh = idx_msk_neigh + (idx_msk_neigh < 0) * size_data[1] - (idx_msk_neigh >= size_data[1]) * size_data[1]
+
+        id_msk = (idy_msk, idx_msk)
+        id_msk_neigh = (idy_msk_neigh, idx_msk_neigh)
+
+        #print(len(id_msk))
+        #print(len(id_msk_neigh))
+
+        output[id_msk] = input[id_msk_neigh]
+        mask[id_msk] = 0.0
+
+        return output, mask  
+    
+    # for N2C
+
     def get_noisy_noisy_image_with_noise(self,noise_np, img_np, no_clip= True):
         if not no_clip:
             img_noisy_np = np.clip(img_np + noise_np, 0, 1).astype(np.float32)
@@ -29,38 +65,19 @@ class Mayo(PatchData):
 
         return img_noisy_np, img_noisy_noisy_np
 
-    def generate_mask(self, input):
-        ratio = 0.85
-        size_window = (7,7)
-        size_data = (self.args.patch_size,self.args.patch_size)
-        num_sample = int(size_data[0] * size_data[1] * (1 - ratio)) 
 
-        mask = np.ones(size_data)
-        output = input
+     # for N2N
 
-        for ich in range(1):
-            idy_msk = np.random.randint(0, size_data[0], num_sample)
-            idx_msk = np.random.randint(0, size_data[1], num_sample)    ##0 to 64 sample num 409
+    def add_gaussian_noise(self, img):
+        row,col = img.shape
+        mean = 0
+        var = 0.001
+        sigma = var**0.5
+        gauss = np.random.normal(mean,sigma,(row,col))
+        gauss = gauss.reshape(row,col)
+        noisy = img + gauss
+        return noisy
 
-            idy_neigh = np.random.randint(-size_window[0] // 2 + size_window[0] % 2, size_window[0] // 2 + size_window[0] % 2, num_sample) ##-32 to 32 num 409
-            idx_neigh = np.random.randint(-size_window[1] // 2 + size_window[1] % 2, size_window[1] // 2 + size_window[1] % 2, num_sample) ##-32 to 32 num 409
-
-            idy_msk_neigh = idy_msk + idy_neigh
-            idx_msk_neigh = idx_msk + idx_neigh
-
-            idy_msk_neigh = idy_msk_neigh + (idy_msk_neigh < 0) * size_data[0] - (idy_msk_neigh >= size_data[0]) * size_data[0]
-            idx_msk_neigh = idx_msk_neigh + (idx_msk_neigh < 0) * size_data[1] - (idx_msk_neigh >= size_data[1]) * size_data[1]
-
-            id_msk = (idy_msk, idx_msk)
-            id_msk_neigh = (idy_msk_neigh, idx_msk_neigh)
-
-            #print(len(id_msk))
-            #print(len(id_msk_neigh))
-
-            output[id_msk] = input[id_msk_neigh]
-            mask[id_msk] = 0.0
-
-        return output, mask  
 
     def __getitem__(self, idx):
         if not self.in_mem:
@@ -102,7 +119,15 @@ class Mayo(PatchData):
 
             return proc_data
 
+        elif self.args.way == 'n2n':
+            input = self.add_gaussian_noise(label)
+            pro_data = common.np2Tensor(input, label,  n_channels=self.n_channels)
+            clean = common.np2Tensor(pair[1], n_channels=self.n_channels)
+            input, label = pro_data[0], pro_data[1]
+            proc_data = {'input': input, 'label': label, 'clean': clean[0]}
 
+            return proc_data
+        
         else:
             pair_t = common.np2Tensor(*pair, n_channels=self.n_channels)
             # print(pair_t[0].shape)

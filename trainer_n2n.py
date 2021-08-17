@@ -15,12 +15,12 @@ from models import set_model
 from utils.saver import load_model, save_checkpoint, save_config
 from utils.helper import set_gpu, set_checkpoint_dir
 
-def run_train(opt, n2sim_t_loader,n2sim_v_loader):
+def run_train(opt, n2n_t_loader,n2n_v_loader):
 
     # check gpu setting with opt arguments
     opt = set_gpu(opt)
     
-    print('Initialize networks for training_noise2simularity')
+    print('Initialize networks for training_noiser2noise')
     net = set_model(opt)
     print(net)
 
@@ -29,13 +29,12 @@ def run_train(opt, n2sim_t_loader,n2sim_v_loader):
     
     print("Setting Optimizer")
 
-    if opt.optimizer == 'adam':
-        optimizer = torch.optim.Adam(net.parameters(), lr=0.0005, betas=(0.5, 0.999))
-        print("===> Use Adam optimizer")
+    
+    optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    print("===> Use SGD optimizer")
     
     if opt.resume:
         opt.start_epoch, net, optimizer = load_model(opt, net, optimizer=optimizer)
-        
     else:
         set_checkpoint_dir(opt)
 
@@ -47,7 +46,8 @@ def run_train(opt, n2sim_t_loader,n2sim_v_loader):
     
     if opt.multi_gpu:
         net = nn.DataParallel(net)
-   
+
+    
     scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5, mode='min')
     # scheduler = StepLR(optimizer_g, step_size=50, gamma=0.5)
 
@@ -76,61 +76,70 @@ def run_train(opt, n2sim_t_loader,n2sim_v_loader):
 
         print("*** Training ***")
         start_time = time.time()
-
-        for iteration_t, batch in enumerate(n2sim_t_loader, 1):
-            input,label,mask,clean = batch['input'], batch['label'], batch['mask'], batch['clean']
+        for iteration_t, batch in enumerate(n2n_t_loader, 1):
+            input,label,clean = batch['input'], batch['label'], batch['clean']
 
             if opt.use_cuda:
-                input,label,mask,clean = input.to(opt.device),label.to(opt.device),mask.to(opt.device),clean.to(opt.device)
-
+                input,label,clean = input.to(opt.device),label.to(opt.device),clean.to(opt.device)
+           
             output = net(input).to(opt.device)
 
-            loss_n2sim = mse_criterion(output * (1 - mask), label * (1 - mask))
-            
+            loss_n2n = mse_criterion(output, label)
+
+            #if iteration_t > 150:
+            #    optimizer = torch.optim.SGD(net.parameters(), lr=0.0001, momentum=0.9)
+
             optimizer.zero_grad()
-            loss_n2sim.backward()
+            loss_n2n.backward()
             optimizer.step()
     
-            train_loss += loss_n2sim
+            train_loss += loss_n2n
     
             # print("max(out):", torch.max(out))
             # print("min(out):", torch.min(out))
-            mse_loss = mse_criterion(output, clean)
+            residual_noise = input - output
+            real_output = output - residual_noise
+
+            mse_loss = mse_criterion(real_output, clean)
             psnr = 10 * math.log10(1 / mse_loss.item())
             train_psnr += psnr
 
             print("%s %.2fs => Epoch[%d/%d](%d/%d): Loss: %.7f PSNR: %.5f" %
-                ('Training', time.time() - start_time, opt.epoch_num, opt.n_epochs, iteration_t, len(n2sim_t_loader), loss_n2sim, psnr))
+                ('Training', time.time() - start_time, opt.epoch_num, opt.n_epochs, iteration_t, len(n2n_t_loader), loss_n2n, psnr))
         print("Mayo avg_Loss : %.5f Mayo avg_PSNR : %.5f"%(train_loss/iteration_t, train_psnr/iteration_t))
         
         valid_loss = 0.0
         valid_psnr = 0.0
 
         net.eval()
-      
+
         print("***Validation***")
         start_valid = time.time()
     
-        for iteration_v, batch in enumerate(n2sim_v_loader, 1):
-            input,label,mask,clean = batch['input'], batch['label'], batch['mask'], batch['clean']
+        for iteration_v, batch in enumerate(n2n_v_loader, 1):
+            input,label,clean = batch['input'], batch['label'], batch['clean']
 
             if opt.use_cuda:
-                input,label,mask,clean = input.to(opt.device), label.to(opt.device), mask.to(opt.device), clean.to(opt.device)
-            
+                input,label,clean = input.to(opt.device),label.to(opt.device),clean.to(opt.device)
+           
             with torch.no_grad():
-                output = net(input) 
-                loss_n2sim = mse_criterion(output * (1 - mask), label * (1 - mask))
-                valid_loss += loss_n2sim
+                output = net(input)
+                loss_n2n = mse_criterion(output, label)
+                valid_loss += loss_n2n
 
-                mse_loss = mse_criterion(output, clean)
-                nmse_loss = mse_criterion(input, clean)
+                residual_noise = input - output
+                real_output = output - residual_noise
+                
+                mse_loss = mse_criterion(real_output, clean)
+                nmse_loss = mse_criterion(real_output, label)
+                
 
                 psnr = 10 * math.log10(1 / mse_loss.item())
                 npsnr = 10 * math.log10(1 / nmse_loss.item())
                 valid_psnr += psnr
 
             print("%s %.2fs => Epoch[%d/%d](%d/%d): valid_loss : %.5f noise PSNR : %.5f PSNR : %.5f "%(
-                'Validation', time.time()-start_valid, epoch, opt.n_epochs, iteration_v, len(n2sim_v_loader), loss_n2sim, npsnr, psnr))
+                'Validation', time.time()-start_valid, epoch, opt.n_epochs, iteration_v, len(n2n_v_loader), loss_n2n, npsnr, psnr))
     
         print("Mayo avg_Loss : %.5f Mayo avg_PSNR : %.5f"%(valid_loss/iteration_v, valid_psnr/iteration_v))
 
