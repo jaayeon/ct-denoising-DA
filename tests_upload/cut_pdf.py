@@ -13,8 +13,10 @@ if __name__ == "__main__":
     new_min = -160.0
     new_max = 240.0
 
-    test_dirs = ['ge-20210717-0511-rev-edsr-sp-chest-pelvis-testset-mayo-1mm',
-                'ge-20210717-0511-rev-edsr-sp-chest-pelvis-testset-mayo-3mm']
+    test_dirs = ['ge-20210819-0418-rev-edsr-p-chest-pelvis-testset-mayo-1mm',
+                'ge-20210819-0413-rev-edsr-p-chest-pelvis-testset-mayo-1mm',
+                'ge-20210819-0414-rev-edsr-p-chest-pelvis-testset-mayo-1mm',
+                'ge-20210819-0425-rev-edsr-p-chest-pelvis-testset-mayo-1mm']
     # test_dirs = ['1mm_nlm_eunji',
     #             '3mm_nlm_eunji']
     test_path = '../../data/denoising/test_result_DA'

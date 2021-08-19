@@ -10,21 +10,21 @@ import matplotlib.pyplot as plt
 #model setup
 #Ds
 #'ge-20210622-2033-rev-edsr-chest-pelvis'
+#0.000001
+#
+#0.00001
+#
+#0.0001
+#'ge-20210819-0418-rev-edsr-p-chest-pelvis'
 #0.001
 #'ge-20210804-1936-rev-edsr-p-chest-pelvis'
-#0.005
-#'ge-20210811-0437-rev-edsr-p-chest-pelvis'
 #0.01
-#'ge-20210721-0127-rev-edsr-p-chest-pelvis'
-#0.05
-#'ge-20210721-1736-rev-edsr-p-chest-pelvis'
+#'ge-20210819-0413-rev-edsr-p-chest-pelvis'
 #0.1
-#'ge-20210705-1432-rev-edsr-p-chest-pelvis'
-#0.5
-#'ge-20210721-0136-rev-edsr-p-chest-pelvis'
+#'ge-20210819-0425-rev-edsr-p-chest-pelvis'
 #1
-#'ge-20210721-0132-rev-edsr-p-chest-pelvis'
-#e10
+#'ge-20210819-0414-rev-edsr-p-chest-pelvis'
+#10
 #'ge-20210804-1938-rev-edsr-p-chest-pelvis'
 
 if __name__=="__main__":
@@ -44,7 +44,7 @@ if __name__=="__main__":
 
     #load data
     #patch
-    batch = 200
+    batch = 100
     gtensor = torch.zeros([batch,1,320,320])
     mtensor = torch.zeros([batch,1,512,512])
     gtensor_clean = torch.zeros([batch,1,320,320])
@@ -62,8 +62,8 @@ if __name__=="__main__":
 
     # checkpoints = ['ge-20210622-2033-rev-edsr-chest-pelvis', 'ge-20210804-1936-rev-edsr-p-chest-pelvis', 'ge-20210811-0437-rev-edsr-p-chest-pelvis', 'ge-20210721-0127-rev-edsr-p-chest-pelvis', 'ge-20210721-1736-rev-edsr-p-chest-pelvis',
     #                 'ge-20210705-1432-rev-edsr-p-chest-pelvis','ge-20210721-0136-rev-edsr-p-chest-pelvis', 'ge-20210721-0132-rev-edsr-p-chest-pelvis', 'ge-20210804-1938-rev-edsr-p-chest-pelvis']
-    checkpoints = ['ge-20210622-2033-rev-edsr-chest-pelvis', 'ge-20210804-1936-rev-edsr-p-chest-pelvis', 'ge-20210721-0127-rev-edsr-p-chest-pelvis',
-                    'ge-20210705-1432-rev-edsr-p-chest-pelvis', 'ge-20210721-0132-rev-edsr-p-chest-pelvis', 'ge-20210804-1938-rev-edsr-p-chest-pelvis']
+    checkpoints = ['ge-20210622-2033-rev-edsr-chest-pelvis', 'ge-20210819-0418-rev-edsr-p-chest-pelvis', 'ge-20210804-1936-rev-edsr-p-chest-pelvis',
+                    'ge-20210819-0413-rev-edsr-p-chest-pelvis', 'ge-20210819-0425-rev-edsr-p-chest-pelvis', 'ge-20210819-0414-rev-edsr-p-chest-pelvis','ge-20210804-1938-rev-edsr-p-chest-pelvis']
     # checkpoints = ['ge-20210804-1938-rev-edsr-p-chest-pelvis']
     checkpoint_dir = opt.checkpoint_dir
     for ch in range(len(checkpoints)):
