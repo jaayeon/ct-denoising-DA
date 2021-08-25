@@ -91,7 +91,7 @@ opt = args
 
 # checkpoint_path = '../../data/denoising/checkpoint_DA/ge-20210506-0609-rev-edsr-chest-pelvis/edsr_epoch_0171_psnr_35.40038188.pth'
 checkpoint_path = '../../data/denoising/checkpoint_DA/ge-20210723-2236-rev-edsr-chest-pelvis/edsr_epoch_0240_loss_0.00001784.pth' 
-src_img = imageio.imread('../../data/denoising/train/phantom/ge/chest/level5_005_crop/ge_chest_level5_005_192.tiff')
+src_img = imageio.imread('../../data/denoising/train/phantom/ge/chest/level5_005_crop/ge_chest_level5_005_215.tiff')
 trg_img = imageio.imread('../../data/denoising/test/mayo/quarter_1mm/L067/quarter_1mm-L067-099.tiff')
 
 src_map_write = './tests/ge_chest_level5_005_192_map_only1_exp.tiff'
