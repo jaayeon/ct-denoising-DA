@@ -2,7 +2,7 @@ import sys, os
 import glob
 import time
 
-from skimage.external.tifffile import imsave, imread
+# from skimage.external.tifffile import imsave, imread
 import numpy as np
 
 import torch
@@ -10,7 +10,7 @@ import torch.nn as nn
 
 import data.make_patches as mp
 from data.make_patches import pad_tensor, unpad_tensor
-from utils.saver import select_checkpoint_dir, load_model
+from utils.loader import select_checkpoint_dir, load_model
 from utils.metric import calc_metrics, forward_ensemble
 from options import args
 
@@ -58,7 +58,7 @@ def run_test(opt, img_list, gt_img_list):
     N_noise_avg_loss = 0.0
     N_noise_avg_psnr = 0.0
     for img_idx, path in enumerate(zip(img_list,gt_img_list),1):
-
+    
         img_path = path[0]
         # print('img_path : ', img_path)
         gt_img_path = path[1]
@@ -135,6 +135,8 @@ def run_test(opt, img_list, gt_img_list):
         else : 
             out_img = out_img_tensor[0,0,:,:].detach().numpy()
 
+        concat_img = np.concatenate((input_img, out_img, gt_img), axis=1)
+
         if 'C' in img_path:
             C_num += 1
             C_avg_loss += batch_loss
@@ -163,7 +165,7 @@ def run_test(opt, img_list, gt_img_list):
 
         # print("out_img.shape:", out_img.shape)
         # print(os.path.abspath(dst_img_path))
-        imsave(dst_img_path, out_img)
+        imsave(dst_img_path, concat_img)
 
     print("[CHEST] #{:d} Test Average Noise Loss: {:.8f}, Average Noise PSNR: {:.8f}, Average Loss: {:.8f}, Average PSNR: {:.8f}".format(
         C_num, C_noise_avg_loss / C_num, C_noise_avg_psnr / C_num, C_avg_loss / C_num, C_avg_psnr / C_num

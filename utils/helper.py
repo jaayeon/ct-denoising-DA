@@ -30,24 +30,63 @@ def set_gpu(opt):
 
 def set_checkpoint_dir(opt):
     dt = datetime.datetime.now()
-    date = dt.strftime("%Y%m%d")
+    date = dt.strftime("%Y%m%d-%H%M")
 
     dataset_name = ''
     for d in opt.train_datasets:
         dataset_name = dataset_name + d
-    model_opt = dataset_name  + "-" + date + "-" + opt.model + '-patch' + str(opt.patch_size)
+    model_opt = dataset_name  + "-" + date + "-" + opt.way + '-' + opt.model
+
+    if opt.content_randomization:
+        model_opt = model_opt + '-cr'
     
+    if opt.noise:
+        for n in opt.noise:
+            model_opt = model_opt + '-{}'.format(n)
+    
+    if opt.source == 'lp-mayo':
+        model_opt = model_opt + '-'
+        for bp in opt.body_part:
+            model_opt = model_opt + bp
+    elif opt.source in ['siemens', 'ge', 'toshiba']:
+        for at in opt.anatomy:
+            model_opt = model_opt + '-{}'.format(at)
+
     opt.checkpoint_dir = os.path.join(opt.checkpoint_dir, model_opt)
 
 def set_test_dir(opt):
     model_opt = os.path.basename(opt.checkpoint_dir)
 
-    if opt.test_patches:
-        test_dir_opt = model_opt + '-patch_offset' + str(opt.patch_offset)
-    else:
-        test_dir_opt = model_opt + "-image"
+    # if opt.test_patches:
+    #     test_dir_opt = model_opt + '-patch_offset' + str(opt.patch_offset)
+    # else:
+    #     test_dir_opt = model_opt + "-image"
+
+    test_dir_opt = model_opt + '-testset-{}'.format(opt.target)
+    if opt.target == 'mayo':
+        test_dir_opt = test_dir_opt + '-{}mm'.format(opt.thickness)
+    elif opt.target in ['siemens', 'ge', 'toshiba']:
+        test_dir_opt = test_dir_opt + '-{}'.format(opt.anatomy)
 
     if opt.ensemble:
         test_dir_opt = test_dir_opt + "-ensemble"
+    
+    if opt.mode == 'fine_tuning':
+        dt = datetime.datetime.now()
+        date = dt.strftime("%Y%m%d-%H%M")
+        test_dir_opt = test_dir_opt + '-fine_tuning-{}'.format(date)
+
+    #for linux server
+    opt.test_result_dir = change_os_slash(opt.test_result_dir)
 
     opt.test_result_dir = os.path.join(opt.test_result_dir , test_dir_opt)
+
+
+def change_os_slash(dir_name):
+    if os.name == 'posix':  #linux
+        dir_name = dir_name.split('\\')
+        out_dir_name = '/'.join(dir_name)
+    elif os.name == 'nt':  #window
+        out_dir_name = dir_name
+
+    return out_dir_name

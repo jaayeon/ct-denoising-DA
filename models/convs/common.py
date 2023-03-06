@@ -28,7 +28,8 @@ class MeanShift(nn.Module):
             elif n_channels == 3:
                 rgb_mean = (0.4488, 0.4371, 0.4040)
                 rgb_std = (1.0, 1.0, 1.0)
-
+        self.sign=sign
+        self.pixel_range=pixel_range
         self.shifter = nn.Conv2d(n_channels, n_channels, 1, 1, 0)
         std = torch.Tensor(rgb_std)
         self.shifter.weight.data = torch.eye(n_channels).view(n_channels, n_channels, 1, 1) / std.view(n_channels, 1, 1, 1)
@@ -37,7 +38,10 @@ class MeanShift(nn.Module):
         for p in self.parameters():
             p.requires_grad = False
 
-    def forward(self, x):
+    def forward(self, x, mean=0.5, std=1.0):
+        mean=torch.Tensor([mean]).to(x.device)
+        std=torch.Tensor([std]).to(x.device)
+        self.shifter.bias.data = self.sign * self.pixel_range * mean / std
         x = self.shifter(x)
         return x
 

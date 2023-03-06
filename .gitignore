@@ -1,0 +1,13 @@
+/**/*.jpg
+/**/*.log
+/**/*.pth
+/*.model
+/**/*.pyc
+/*.pyc
+/__pycache__/*
+/__pycache__
+*/__pycache__/*
+*/*/__pycache__
+*.code-workspace
+/tests/*
+/tests
