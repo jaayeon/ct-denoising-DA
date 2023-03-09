@@ -1,8 +1,14 @@
 # Unsupervised Domain Adaptation for Low-dose Computed Tomography Denoising
 paper can be found in [here](https://ieeexplore.ieee.org/document/9969607)
 
-![gitimg](https://user-images.githubusercontent.com/33833333/223956344-700903ca-42e6-417e-a12e-18450e58f61c.jpg)
-
+<center>
+<img 
+     src="https://user-images.githubusercontent.com/33833333/223956344-700903ca-42e6-417e-a12e-18450e58f61c.jpg"
+     height="300"
+     weight="600"
+     />
+</cetner>
+    
 ## Train
 * base : Denoising without reversal loss. Denoising model can be [dncnn, unet, edsr].
     ``` 
